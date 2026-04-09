@@ -69,6 +69,8 @@ Predefined workflow modes. One click restores an entire context:
 
 **Workspace Switching**
 
+Workspaces are not virtual desktops. macOS Spaces, Windows Task View, and KDE Activities just shuffle which windows are visible — the apps stay the same, the files stay the same, you're just hiding and showing windows. slab workspaces change what's underneath: different files in the file browser, different directory in the terminal, different bookmarks, different tiles, different toolbar tools. It's not "desktop 2 has my code windows." It's "the entire environment is shaped for coding."
+
 Workspaces are apps. On the tile grid, a "Workflows" tile lists your saved workspaces. Click one and it opens on the taskbar like any other app. The focused workspace sets the tile grid layout on the main screen behind it.
 
 - Multiple workspaces can be open on the taskbar simultaneously — school and coding side by side
