@@ -4,6 +4,7 @@ use tower_http::services::ServeDir;
 
 mod config;
 mod files;
+mod media;
 
 #[tokio::main]
 async fn main() {
@@ -25,7 +26,9 @@ async fn main() {
         .route("/api/files/touch", post(files::touch))
         .route("/api/user", get(get_user))
         .route("/api/config", get(config::get_config).post(config::set_config))
-        .route("/api/config/system", post(config::set_system_config));
+        .route("/api/config/system", post(config::set_system_config))
+        .route("/api/media/scan", get(media::scan_folders))
+        .route("/api/media/list", get(media::list_media));
 
     let app = api.fallback_service(ServeDir::new("frontend"));
 
