@@ -76,15 +76,17 @@
 
       const win = Slab.createWindow('xbridge', name, el, 800, 600);
 
-      const proxyUrl = `/api/xbridge/proxy/${data.port}/index.html`;
+      // xpra serves its own HTML5 client + websocket on its port
+      // connect the iframe directly to xpra's port on the same hostname
+      const xpraUrl = `${location.protocol}//${location.hostname}:${data.port}/`;
       let attempts = 0;
       const poll = setInterval(async () => {
         attempts++;
         try {
-          const check = await fetch(proxyUrl, { method: 'HEAD' });
+          const check = await fetch(`/api/xbridge/proxy/${data.port}/index.html`, { method: 'HEAD' });
           if (check.ok) {
             clearInterval(poll);
-            el.innerHTML = `<iframe class="xbridge-frame" src="${proxyUrl}"></iframe>`;
+            el.innerHTML = `<iframe class="xbridge-frame" src="${xpraUrl}"></iframe>`;
           } else if (attempts >= 30) {
             clearInterval(poll);
             el.innerHTML = `<div class="xbridge-loading xbridge-error">Failed to connect to ${name}</div>`;
