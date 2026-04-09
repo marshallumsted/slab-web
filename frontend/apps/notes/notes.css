@@ -1,0 +1,375 @@
+/* ── Notes App ── */
+
+.notes-app {
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+}
+
+/* Sidebar */
+.notes-sidebar {
+  width: 180px;
+  flex-shrink: 0;
+  background: var(--gray-900);
+  border-right: 1px solid var(--gray-800);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.notes-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--gray-800);
+}
+
+.notes-sidebar-label {
+  font-size: .55rem;
+  font-weight: 700;
+  color: var(--red);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.notes-new-group {
+  display: flex;
+  gap: 2px;
+}
+
+.notes-new-btn {
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  background: var(--gray-800);
+  color: var(--gray-300);
+  border: none;
+  width: 24px;
+  height: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .1s, color .1s;
+}
+
+.notes-new-btn:hover {
+  background: var(--red);
+  color: #fff;
+}
+
+.notes-list {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-700) transparent;
+}
+
+.notes-list-item {
+  padding: 6px 10px;
+  color: var(--gray-300);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background .1s;
+  font-size: .65rem;
+}
+
+.notes-list-item:hover {
+  background: var(--gray-800);
+  color: var(--white);
+}
+
+.notes-list-item.active {
+  background: var(--gray-800);
+  color: var(--white);
+  border-left: 2px solid var(--red);
+}
+
+.notes-list-icon {
+  color: var(--gray-500);
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+
+.notes-list-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notes-editor-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.notes-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--gray-500);
+  font-size: .7rem;
+}
+
+.window-body:has(.notes-app) {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ── Sticky Note Editor (Type 1: plain text) ── */
+
+.sticky-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.sticky-editor-textarea {
+  flex: 1;
+  background: var(--gray-800);
+  color: var(--white);
+  border: none;
+  padding: 16px;
+  font-family: var(--font-sans);
+  font-size: .85rem;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-700) transparent;
+}
+
+.sticky-editor-textarea::placeholder {
+  color: var(--gray-600);
+}
+
+/* ── Legal Pad Editor (Type 2: dual column table) ── */
+
+.legal-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-700) transparent;
+}
+
+.legal-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.legal-row {
+  display: flex;
+  gap: 1px;
+  align-items: stretch;
+}
+
+.legal-cell {
+  flex: 1;
+  background: var(--gray-800);
+  border: none;
+  color: var(--white);
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  padding: 6px 8px;
+  outline: none;
+  min-width: 0;
+}
+
+.legal-cell:focus {
+  background: var(--gray-700);
+}
+
+.legal-cell::placeholder {
+  color: var(--gray-600);
+}
+
+.legal-remove {
+  background: transparent;
+  border: none;
+  color: var(--gray-600);
+  font-size: .7rem;
+  width: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color .1s;
+}
+
+.legal-remove:hover {
+  color: var(--red);
+}
+
+.legal-add-row {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: var(--gray-800);
+  color: var(--gray-500);
+  border: none;
+  padding: 6px;
+  margin-top: 4px;
+  cursor: pointer;
+  transition: background .1s, color .1s;
+}
+
+.legal-add-row:hover {
+  background: var(--gray-700);
+  color: var(--white);
+}
+
+/* ── Sketch Pad Editor (Type 3: freeform drawing) ── */
+
+.sketch-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.sketch-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  background: var(--gray-900);
+  border-bottom: 1px solid var(--gray-800);
+  flex-shrink: 0;
+}
+
+.sketch-tool,
+.sketch-size {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  font-weight: 700;
+  background: var(--gray-800);
+  color: var(--gray-300);
+  border: none;
+  width: 26px;
+  height: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .1s, color .1s;
+}
+
+.sketch-tool:hover,
+.sketch-size:hover {
+  background: var(--gray-700);
+  color: var(--white);
+}
+
+.sketch-tool.active {
+  background: var(--red);
+  color: #fff;
+}
+
+.sketch-size.active {
+  background: var(--gray-600);
+  color: var(--white);
+}
+
+.sketch-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--gray-700);
+  margin: 0 4px;
+}
+
+.sketch-color {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--gray-700);
+  padding: 0;
+  cursor: pointer;
+  background: none;
+}
+
+.sketch-color::-webkit-color-swatch-wrapper { padding: 2px; }
+.sketch-color::-webkit-color-swatch { border: none; }
+
+.sketch-spacer {
+  flex: 1;
+}
+
+.sketch-clear {
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: var(--gray-800);
+  color: var(--gray-500);
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: background .1s, color .1s;
+}
+
+.sketch-clear:hover {
+  background: var(--red);
+  color: #fff;
+}
+
+.sketch-canvas-wrap {
+  flex: 1;
+  min-height: 0;
+  background: var(--black);
+  position: relative;
+}
+
+.sketch-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* ── Sticky Note Spawn (quick spawn element) ── */
+
+.sticky-note-spawn {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sticky-note-spawn-text {
+  flex: 1;
+  background: var(--gray-800);
+  color: var(--white);
+  border: none;
+  padding: 12px;
+  font-family: var(--font-sans);
+  font-size: .85rem;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-700) transparent;
+}
+
+.sticky-note-spawn-text::placeholder {
+  color: var(--gray-600);
+}
+
+.window-body:has(.sticky-note-spawn) {
+  padding: 0;
+  overflow: hidden;
+}

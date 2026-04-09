@@ -273,6 +273,13 @@ async function initApps() {
   }
   await Promise.all(depPromises);
 
+  // load app styles (parallel)
+  for (const m of manifests) {
+    for (const css of (m.styles || [])) {
+      loadResource('css', `/apps/${m.id}/${css}`);
+    }
+  }
+
   // load app scripts sequentially
   for (const m of manifests) {
     for (const js of (m.scripts || [])) {
