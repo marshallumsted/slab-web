@@ -12,5 +12,12 @@
       "label": "File Browser",
       "icon": "<svg viewBox='0 0 16 16' width='14' height='14'><path d='M2,4 L2,13 L14,13 L14,5 L8,5 L7,4 Z' fill='none' stroke='currentColor' stroke-width='1.5'/></svg>"
     }
+  ],
+  "settings": [
+    { "key": "image_previews", "name": "Image Previews", "type": "toggle", "default": true },
+    { "key": "video_previews", "name": "Video Previews", "type": "toggle", "default": true },
+    { "key": "show_hidden", "name": "Hidden Files", "type": "toggle", "default": false },
+    { "key": "default_view", "name": "View", "type": "select", "default": "list",
+      "options": [["list","List"],["grid","Grid"]] }
   ]
 }

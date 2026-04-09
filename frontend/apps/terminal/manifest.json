@@ -13,5 +13,10 @@
       "icon": "<svg viewBox='0 0 16 16' width='14' height='14'><polyline points='4,4 8,8 4,12' fill='none' stroke='currentColor' stroke-width='1.5'/><line x1='9' y1='12' x2='13' y2='12' stroke='currentColor' stroke-width='1.5'/></svg>"
     }
   ],
-  "capabilities": ["openTerminalWithCommand"]
+  "capabilities": ["openTerminalWithCommand"],
+  "settings": [
+    { "key": "font_size", "name": "Font Size", "type": "select", "default": "14",
+      "options": [["12","12px"],["13","13px"],["14","14px"],["15","15px"],["16","16px"],["18","18px"]] },
+    { "key": "bold_is_bright", "name": "Bold is Bright", "type": "toggle", "default": true }
+  ]
 }

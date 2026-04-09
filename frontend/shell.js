@@ -51,70 +51,164 @@ window.Slab = {
 const desktop = document.getElementById('desktop');
 const taskbarApps = document.getElementById('taskbar-apps');
 const tileGrid = document.getElementById('tile-grid-inner');
-const clockEl = document.getElementById('taskbar-clock');
-const settingsPopup = document.getElementById('settings-popup');
-const settingsBtn = document.getElementById('taskbar-settings');
+const menubarAppSettings = document.getElementById('menubar-app-settings');
+const menubarSystem = document.getElementById('menubar-system');
 const spawnContainer = document.getElementById('taskbar-spawn');
 
 let windows = [];
 let zCounter = 10;
+let focusedAppId = null;
+let slabConfig = null;
 
-// ── Clock ──
+// ── Menu Bar: System Icons (right side) ──
 
-function updateClock() {
-  const now = new Date();
-  const h = now.getHours().toString().padStart(2, '0');
-  const m = now.getMinutes().toString().padStart(2, '0');
-  clockEl.textContent = `${h}:${m}`;
-}
-updateClock();
-setInterval(updateClock, 10000);
+function buildMenubarSystem() {
+  menubarSystem.innerHTML = '';
 
-// ── Settings Popup ──
-
-settingsBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  settingsPopup.classList.toggle('hidden');
-  if (!settingsPopup.classList.contains('hidden')) buildSettingsPopup();
-});
-
-document.addEventListener('click', (e) => {
-  if (!settingsPopup.contains(e.target) && e.target !== settingsBtn) {
-    settingsPopup.classList.add('hidden');
-  }
-});
-
-function buildSettingsPopup() {
-  const grid = document.getElementById('settings-popup-grid');
-  fetch('/api/config').then(r => r.json()).then(cfg => {
-    const g = cfg.settings?.general || {};
-    const isDark = g.theme !== 'light';
-    grid.innerHTML = `
-      <div class="settings-popup-tile ${isDark ? 'active' : ''}" data-action="theme">
-        <div class="settings-popup-tile-icon">${isDark ? '\u263E' : '\u2600'}</div>
-        <div class="settings-popup-tile-label">${isDark ? 'Dark' : 'Light'}</div>
-      </div>
-      <div class="settings-popup-tile" data-action="open-settings">
-        <div class="settings-popup-tile-icon">\u2699</div>
-        <div class="settings-popup-tile-label">All Settings</div>
-      </div>
-    `;
-    grid.querySelector('[data-action="theme"]').addEventListener('click', () => {
-      const newTheme = isDark ? 'light' : 'dark';
+  // theme toggle (KDE-style inline icon)
+  const themeBtn = document.createElement('button');
+  themeBtn.className = 'menubar-sys-icon';
+  themeBtn.title = 'Toggle theme';
+  const updateThemeIcon = () => {
+    const isDark = !document.body.classList.contains('theme-light');
+    themeBtn.innerHTML = isDark ? '\u263E' : '\u2600';
+    themeBtn.classList.toggle('active', !isDark);
+  };
+  updateThemeIcon();
+  themeBtn.addEventListener('click', () => {
+    const isDark = !document.body.classList.contains('theme-light');
+    const newTheme = isDark ? 'light' : 'dark';
+    loadConfig().then(cfg => {
       if (!cfg.settings) cfg.settings = {};
       if (!cfg.settings.general) cfg.settings.general = {};
       cfg.settings.general.theme = newTheme;
-      fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings: cfg.settings, places: cfg.places, network: cfg.network }),
-      }).then(() => { applySettings(); settingsPopup.classList.add('hidden'); });
+      saveConfig(cfg).then(() => { applySettings(); updateThemeIcon(); });
     });
-    grid.querySelector('[data-action="open-settings"]').addEventListener('click', () => {
-      settingsPopup.classList.add('hidden');
-      launchApp('settings');
-    });
-  }).catch(() => {});
+  });
+  menubarSystem.appendChild(themeBtn);
+
+  // settings gear — opens full settings app
+  const settingsBtn = document.createElement('button');
+  settingsBtn.className = 'menubar-sys-icon';
+  settingsBtn.title = 'Settings';
+  settingsBtn.innerHTML = '\u2699';
+  settingsBtn.addEventListener('click', () => launchApp('settings'));
+  menubarSystem.appendChild(settingsBtn);
+
+  // divider before clock
+  const div = document.createElement('div');
+  div.className = 'menubar-divider';
+  menubarSystem.appendChild(div);
+
+  // clock
+  const clock = document.createElement('span');
+  clock.className = 'menubar-clock';
+  clock.id = 'menubar-clock';
+  menubarSystem.appendChild(clock);
+
+  function updateClock() {
+    const now = new Date();
+    const h = now.getHours().toString().padStart(2, '0');
+    const m = now.getMinutes().toString().padStart(2, '0');
+    clock.textContent = `${h}:${m}`;
+  }
+  updateClock();
+  setInterval(updateClock, 10000);
+}
+
+buildMenubarSystem();
+
+// ── Menu Bar: App Settings (left side) ──
+
+function updateMenubarAppSettings() {
+  menubarAppSettings.innerHTML = '';
+  if (!focusedAppId) return;
+
+  const manifest = Slab._manifests.find(m => m.id === focusedAppId);
+  if (!manifest || !manifest.settings || manifest.settings.length === 0) return;
+
+  // app name label
+  const nameEl = document.createElement('div');
+  nameEl.className = 'menubar-app-name';
+  nameEl.textContent = manifest.name;
+  menubarAppSettings.appendChild(nameEl);
+
+  const div = document.createElement('div');
+  div.className = 'menubar-divider';
+  menubarAppSettings.appendChild(div);
+
+  // load config then render settings
+  loadConfig().then(cfg => {
+    const appCfg = cfg.settings?.[focusedAppId] || {};
+
+    for (const setting of manifest.settings) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'menubar-setting';
+
+      const label = document.createElement('span');
+      label.className = 'menubar-setting-label';
+      label.textContent = setting.name;
+      wrapper.appendChild(label);
+
+      if (setting.type === 'toggle') {
+        const val = appCfg[setting.key] !== undefined ? appCfg[setting.key] : setting.default;
+        const toggle = document.createElement('button');
+        toggle.className = `menubar-toggle ${val ? 'on' : ''}`;
+        toggle.innerHTML = '<span class="menubar-toggle-knob"></span>';
+        toggle.addEventListener('click', () => {
+          const newVal = !toggle.classList.contains('on');
+          toggle.classList.toggle('on', newVal);
+          if (!cfg.settings) cfg.settings = {};
+          if (!cfg.settings[focusedAppId]) cfg.settings[focusedAppId] = {};
+          cfg.settings[focusedAppId][setting.key] = newVal;
+          saveConfig(cfg).then(() => applySettings());
+        });
+        wrapper.appendChild(toggle);
+      } else if (setting.type === 'select') {
+        const sel = document.createElement('select');
+        sel.className = 'menubar-select';
+        const currentVal = appCfg[setting.key] || setting.default;
+        for (const [v, l] of (setting.options || [])) {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = l;
+          if (v === String(currentVal)) opt.selected = true;
+          sel.appendChild(opt);
+        }
+        sel.addEventListener('change', () => {
+          if (!cfg.settings) cfg.settings = {};
+          if (!cfg.settings[focusedAppId]) cfg.settings[focusedAppId] = {};
+          cfg.settings[focusedAppId][setting.key] = sel.value;
+          saveConfig(cfg).then(() => applySettings());
+        });
+        wrapper.appendChild(sel);
+      }
+
+      menubarAppSettings.appendChild(wrapper);
+    }
+  });
+}
+
+// ── Config helpers ──
+
+async function loadConfig() {
+  if (slabConfig) return slabConfig;
+  try {
+    const res = await fetch('/api/config');
+    slabConfig = await res.json();
+  } catch {
+    slabConfig = { settings: {}, places: [], network: [] };
+  }
+  return slabConfig;
+}
+
+async function saveConfig(cfg) {
+  slabConfig = cfg;
+  await fetch('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ settings: cfg.settings, places: cfg.places, network: cfg.network }),
+  });
 }
 
 // ── App Discovery & Loading ──
@@ -447,6 +541,13 @@ function focusWindow(win) {
   if (entry) entry.classList.add('focused');
   const w = windows.find(w => w.id === win.dataset.id);
   if (w) w.minimized = false;
+
+  // update menubar with focused app's settings
+  const appId = win.dataset.id.replace(/-\d+$/, '');
+  if (appId !== focusedAppId) {
+    focusedAppId = appId;
+    updateMenubarAppSettings();
+  }
 }
 
 function minimizeWindow(win) {
@@ -478,6 +579,21 @@ function destroyWindow(win) {
   if (idx !== -1) windows.splice(idx, 1);
   removeTaskbarEntry(win.dataset.id);
   win.remove();
+
+  // clear menubar if no windows left or focus another
+  if (windows.length === 0) {
+    focusedAppId = null;
+    updateMenubarAppSettings();
+  } else {
+    // focus the top-most remaining window
+    const topWin = windows.reduce((a, b) => {
+      const az = parseInt(a.el.style.zIndex) || 0;
+      const bz = parseInt(b.el.style.zIndex) || 0;
+      return bz > az ? b : a;
+    });
+    if (topWin && !topWin.minimized) focusWindow(topWin.el);
+    else { focusedAppId = null; updateMenubarAppSettings(); }
+  }
 }
 
 // ── Taskbar Entries ──
@@ -657,7 +773,7 @@ function showGlobalContextMenu(e, items) {
 document.addEventListener('contextmenu', (e) => e.preventDefault());
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') settingsPopup.classList.add('hidden');
+  // reserved for future keyboard shortcuts
 });
 
 // ── Init ──

@@ -17,21 +17,16 @@
     let activeSection = 'setup';
 
     // section definitions
+    // System-level settings only — per-app settings live in the top menu bar
     const sections = [
       { id: 'setup', label: 'Setup', group: 'slab', highlight: true },
       { id: 'general', label: 'General', group: 'slab' },
       { id: 'performance', label: 'Performance', group: 'slab' },
-      { id: 'files', label: 'Files', group: 'apps' },
-      { id: 'terminal', label: 'Terminal', group: 'apps' },
-      { id: 'editor', label: 'Editor', group: 'apps' },
-      { id: 'sysmon', label: 'System Monitor', group: 'apps' },
-      { id: 'services', label: 'Services', group: 'apps' },
-      { id: 'logs', label: 'Log Viewer', group: 'apps' },
       { id: 'network', label: 'Network', group: 'system' },
       { id: 'about', label: 'About', group: 'system' },
     ];
 
-    const groupLabels = { slab: 'Slab', apps: 'Apps', system: 'System' };
+    const groupLabels = { slab: 'Slab', system: 'System' };
 
     function renderNav() {
       nav.innerHTML = '';
@@ -59,10 +54,7 @@
       cfg = await res.json();
       if (!cfg.settings) cfg.settings = {};
       if (!cfg.settings.performance) cfg.settings.performance = {};
-      if (!cfg.settings.files) cfg.settings.files = {};
       if (!cfg.settings.general) cfg.settings.general = {};
-      if (!cfg.settings.terminal) cfg.settings.terminal = {};
-      if (!cfg.settings.editor) cfg.settings.editor = {};
       renderNav();
       renderSection();
     }
@@ -98,12 +90,6 @@
         setup: renderSetup,
         general: renderGeneral,
         performance: renderPerformance,
-        files: renderFiles,
-        terminal: renderTerminal,
-        editor: renderEditor,
-        sysmon: renderSysmon,
-        services: renderServices,
-        logs: renderLogs,
         network: renderNetwork,
         about: renderAbout,
       };
@@ -121,12 +107,7 @@
             'perf-anim': [cfg.settings.performance, 'animations', true],
             'perf-dots': [cfg.settings.performance, 'dot_grid', true],
             'perf-blur': [cfg.settings.performance, 'backdrop_blur', true],
-            'files-imgprev': [cfg.settings.files, 'image_previews', true],
-            'files-vidprev': [cfg.settings.files, 'video_previews', true],
-            'files-hidden': [cfg.settings.files, 'show_hidden', false],
-            'term-bold': [cfg.settings.terminal, 'bold_is_bright', true],
-            'editor-wordwrap': [cfg.settings.editor, 'word_wrap', true],
-            'editor-linenums': [cfg.settings.editor, 'line_numbers', true],
+            // per-app settings now handled by the top menu bar
           };
           const t = toggleMap[id];
           if (t) toggle(t[0], t[1], t[2]);
@@ -136,9 +117,6 @@
         sel.addEventListener('change', () => {
           const id = sel.dataset.id;
           const selectMap = {
-            'files-defview': [cfg.settings.files, 'default_view'],
-            'term-fontsize': [cfg.settings.terminal, 'font_size'],
-            'editor-fontsize': [cfg.settings.editor, 'font_size'],
             'general-theme': [cfg.settings.general, 'theme'],
           };
           const s = selectMap[id];
@@ -353,74 +331,7 @@
       `;
     }
 
-    function renderFiles() {
-      const f = cfg.settings.files;
-      main.innerHTML = `
-        <div class="settings-page-title">Files</div>
-        <div class="settings-page-desc">File browser behavior and display</div>
-        <div class="settings-section">
-          ${settingRow('Image Previews', 'Show thumbnail previews for image files', f.image_previews !== false, 'files-imgprev')}
-          ${settingRow('Video Previews', 'Generate thumbnails for video files (requires ffmpeg)', f.video_previews !== false, 'files-vidprev')}
-          ${settingRow('Show Hidden Files', 'Display dotfiles and hidden directories', f.show_hidden === true, 'files-hidden')}
-          ${settingSelect('Default View', 'Initial view mode when opening file browser', f.default_view || 'list', [['list', 'List'], ['grid', 'Grid']], 'files-defview')}
-        </div>
-      `;
-    }
-
-    function renderTerminal() {
-      const t = cfg.settings.terminal || {};
-      main.innerHTML = `
-        <div class="settings-page-title">Terminal</div>
-        <div class="settings-page-desc">Terminal emulator settings</div>
-        <div class="settings-section">
-          ${settingSelect('Font Size', 'Terminal font size in pixels', t.font_size || '14', [['12', '12px'], ['13', '13px'], ['14', '14px (default)'], ['15', '15px'], ['16', '16px'], ['18', '18px']], 'term-fontsize')}
-          ${settingRow('Bold is Bright', 'Use bright colors for bold text', t.bold_is_bright !== false, 'term-bold')}
-        </div>
-      `;
-    }
-
-    function renderEditor() {
-      const e = cfg.settings.editor || {};
-      main.innerHTML = `
-        <div class="settings-page-title">Editor</div>
-        <div class="settings-page-desc">Text editor preferences</div>
-        <div class="settings-section">
-          ${settingSelect('Font Size', 'Editor font size in pixels', e.font_size || '14', [['12', '12px'], ['13', '13px'], ['14', '14px (default)'], ['15', '15px'], ['16', '16px'], ['18', '18px']], 'editor-fontsize')}
-          ${settingRow('Word Wrap', 'Wrap long lines to fit the window', e.word_wrap !== false, 'editor-wordwrap')}
-          ${settingRow('Line Numbers', 'Show line numbers in the gutter', e.line_numbers !== false, 'editor-linenums')}
-        </div>
-      `;
-    }
-
-    function renderSysmon() {
-      main.innerHTML = `
-        <div class="settings-page-title">System Monitor</div>
-        <div class="settings-page-desc">Dashboard display options</div>
-        <div class="settings-section">
-          <div class="settings-row"><div class="settings-row-info"><div class="settings-row-name" style="color:var(--gray-500);">No settings yet</div><div class="settings-row-desc">Settings will appear here as features are built</div></div></div>
-        </div>
-      `;
-    }
-
-    function renderServices() {
-      main.innerHTML = `
-        <div class="settings-page-title">Services</div>
-        <div class="settings-page-desc">Service manager options</div>
-        <div class="settings-section">
-          <div class="settings-row"><div class="settings-row-info"><div class="settings-row-name" style="color:var(--gray-500);">No settings yet</div><div class="settings-row-desc">Settings will appear here as features are built</div></div></div>
-        </div>
-      `;
-    }
-
-    function renderLogs() {
-      main.innerHTML = `
-        <div class="settings-page-title">Log Viewer</div>
-        <div class="settings-page-desc">Journal log display</div>
-        <div class="settings-section">
-          <div class="settings-row"><div class="settings-row-info"><div class="settings-row-name" style="color:var(--gray-500);">No settings yet</div><div class="settings-row-desc">Settings will appear here as features are built</div></div></div>
-        </div>
-      `;
-    }
+    // Per-app settings removed — now handled by the top menu bar contextually
 
     function renderNetwork() {
       main.innerHTML = `

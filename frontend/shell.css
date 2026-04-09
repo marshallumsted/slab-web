@@ -1,9 +1,166 @@
+/* ── Menu Bar (Top Bar) ── */
+
+#menubar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  background: var(--gray-900);
+  border-bottom: 1px solid var(--gray-800);
+  padding: 0 4px;
+  user-select: none;
+}
+
+.menubar-left {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 1;
+  height: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.menubar-left::-webkit-scrollbar { display: none; }
+
+.menubar-right {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+  height: 100%;
+}
+
+/* App settings controls in menubar */
+.menubar-app-name {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--red);
+  padding: 0 10px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.menubar-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--gray-700);
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+
+.menubar-setting {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  height: 100%;
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  color: var(--gray-300);
+  white-space: nowrap;
+}
+
+.menubar-setting-label {
+  color: var(--gray-500);
+  letter-spacing: .04em;
+}
+
+.menubar-toggle {
+  width: 24px;
+  height: 12px;
+  background: var(--gray-700);
+  border: 1px solid var(--gray-600);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.menubar-toggle.on {
+  background: var(--red);
+  border-color: var(--red);
+}
+
+.menubar-toggle-knob {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 8px;
+  height: 8px;
+  background: var(--gray-300);
+  transition: left .15s;
+}
+
+.menubar-toggle.on .menubar-toggle-knob {
+  left: 13px;
+  background: var(--white);
+}
+
+.menubar-select {
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  background: var(--gray-800);
+  border: 1px solid var(--gray-700);
+  color: var(--white);
+  padding: 1px 4px;
+  cursor: pointer;
+  outline: none;
+}
+
+.menubar-select:focus {
+  border-color: var(--red);
+}
+
+/* System icons (KDE style — inline, always visible) */
+.menubar-sys-icon {
+  background: transparent;
+  border: none;
+  color: var(--gray-300);
+  width: 28px;
+  height: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .1s, color .1s;
+}
+
+.menubar-sys-icon:hover {
+  background: var(--gray-800);
+  color: var(--white);
+}
+
+.menubar-sys-icon.active {
+  color: var(--red);
+}
+
+.menubar-clock {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  font-weight: 700;
+  color: var(--gray-300);
+  letter-spacing: .04em;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
 /* ── Tile Grid (Desktop Surface) ── */
 
 #tile-grid {
   position: fixed;
   inset: 0;
-  bottom: 56px;
+  top: 29px;
+  bottom: 44px;
   z-index: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -125,7 +282,8 @@
 #desktop {
   position: fixed;
   inset: 0;
-  bottom: 56px;
+  top: 29px;
+  bottom: 44px;
   z-index: 1;
   pointer-events: none;
   touch-action: none;
@@ -252,110 +410,7 @@
   color: #fff;
 }
 
-/* Settings button */
-.taskbar-settings-btn {
-  background: transparent;
-  border: none;
-  color: rgba(255,255,255,.7);
-  width: 36px;
-  height: 100%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background .15s, color .15s;
-}
-
-.taskbar-settings-btn:hover {
-  background: var(--taskbar-overlay);
-  color: #fff;
-}
-
-/* Clock */
-.taskbar-clock {
-  font-family: var(--font-mono);
-  font-size: .65rem;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: .04em;
-  padding: 0 10px;
-  white-space: nowrap;
-}
-
-/* ── Settings Popup ── */
-
-.settings-popup {
-  position: fixed;
-  bottom: 52px;
-  right: 8px;
-  z-index: 1001;
-  background: var(--gray-900);
-  border: 1px solid var(--gray-700);
-  width: 280px;
-  max-height: 400px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--gray-700) transparent;
-}
-
-.settings-popup.hidden { display: none; }
-
-.settings-popup-inner {
-  padding: 12px;
-}
-
-.settings-popup-title {
-  font-family: var(--font-mono);
-  font-size: .6rem;
-  font-weight: 700;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--red);
-  margin-bottom: 10px;
-}
-
-.settings-popup-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--gap);
-}
-
-.settings-popup-tile {
-  background: var(--gray-800);
-  padding: 10px;
-  cursor: pointer;
-  transition: background .15s;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.settings-popup-tile:hover {
-  background: var(--gray-700);
-}
-
-.settings-popup-tile.active {
-  background: var(--red);
-}
-
-.settings-popup-tile-icon {
-  font-size: 1rem;
-  color: var(--white);
-}
-
-.settings-popup-tile-label {
-  font-family: var(--font-mono);
-  font-size: .5rem;
-  color: var(--gray-300);
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  text-align: center;
-}
-
-.settings-popup-tile.active .settings-popup-tile-label {
-  color: rgba(255,255,255,.8);
-}
+/* (Settings button and clock moved to top menu bar) */
 
 /* ── Windows ── */
 
@@ -379,7 +434,7 @@
   top: 0 !important;
   left: 0 !important;
   width: 100vw !important;
-  height: calc(100vh - 44px) !important;
+  height: calc(100vh - 29px - 44px) !important;
 }
 
 /* Title bar */
@@ -2459,9 +2514,7 @@ body.no-dot-grid::before {
   display: none;
 }
 
-body.no-blur .settings-popup {
-  backdrop-filter: none;
-}
+/* no-blur: no elements currently use backdrop-filter */
 
 body.no-animations *,
 body.no-animations *::before,
@@ -2473,17 +2526,23 @@ body.no-animations *::after {
 /* ── Mobile ── */
 
 @media (max-width: 768px) {
+  #menubar {
+    height: 24px;
+  }
+
   #taskbar {
-    height: 48px;
+    height: 44px;
   }
 
   #tile-grid {
-    bottom: 48px;
+    top: 25px;
+    bottom: 44px;
     padding: 12px;
   }
 
   #desktop {
-    bottom: 48px;
+    top: 25px;
+    bottom: 44px;
   }
 
   .tile-grid-inner {

@@ -6,5 +6,11 @@
   "window": { "width": 800, "height": 550 },
   "scripts": ["editor.js"],
   "dependencies": ["monaco", "marked"],
-  "capabilities": ["openFileInEditor"]
+  "capabilities": ["openFileInEditor"],
+  "settings": [
+    { "key": "font_size", "name": "Font Size", "type": "select", "default": "14",
+      "options": [["12","12px"],["13","13px"],["14","14px"],["15","15px"],["16","16px"],["18","18px"]] },
+    { "key": "word_wrap", "name": "Word Wrap", "type": "toggle", "default": true },
+    { "key": "line_numbers", "name": "Line Numbers", "type": "toggle", "default": true }
+  ]
 }

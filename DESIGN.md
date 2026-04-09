@@ -116,10 +116,10 @@ These aren't workspace-specific. They're desk tools — the stuff that's always 
 
 **Two bars:**
 
-- **Top bar:** Menu bar with contextual app settings, system menus. When an app is focused, its declared settings appear here automatically. The desktop renders them — apps just provide data. Also holds system-level items (clock, notifications).
-- **Bottom bar (taskbar):** The toolbar. Left = open apps and workflow tabs. Right = Quick Spawn tools → Clock.
+- **Top bar:** Menu bar. Left = contextual app settings (appear/disappear based on focused app). Right = system controls as inline icons (volume, Wi-Fi, bluetooth, battery — KDE style, always visible, clickable, no submenu). Clock on the far right.
+- **Bottom bar (taskbar):** The toolbar. Left = open apps and workflow tabs. Right = Quick Spawn tools.
 
-The top bar is for information and configuration. The bottom bar is for actions and switching.
+The top bar is for information and configuration. The bottom bar is for actions and switching. App settings and system settings never overlap — left side adapts, right side stays fixed.
 
 The bottom taskbar is fully user-customizable:
 - **Tools:** Add, remove, reorder quick spawn items.
