@@ -1051,6 +1051,23 @@ select.files-dialog-input {
   border-color: var(--red);
 }
 
+/* Lock indicator */
+.settings-lock {
+  font-size: .5rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--gray-500);
+  background: var(--gray-800);
+  padding: 2px 6px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.settings-locked {
+  opacity: .5;
+  pointer-events: none;
+}
+
 /* ── Performance toggle classes ── */
 
 body.no-dot-grid::before {

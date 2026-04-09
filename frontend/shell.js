@@ -514,10 +514,15 @@ function buildFilesContent() {
   }
 
   async function saveConfig() {
+    const userConfig = {
+      settings: slabConfig.settings,
+      places: slabConfig.places,
+      network: slabConfig.network,
+    };
     await fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(slabConfig),
+      body: JSON.stringify(userConfig),
     });
   }
 
@@ -1380,11 +1385,21 @@ function buildSettingsContent() {
   }
 
   async function save() {
+    // send only user config shape — strip locked/is_admin
+    const userConfig = {
+      settings: cfg.settings,
+      places: cfg.places,
+      network: cfg.network,
+    };
     await fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(cfg),
+      body: JSON.stringify(userConfig),
     });
+  }
+
+  function isLocked(key) {
+    return cfg.locked && cfg.locked.includes(key);
   }
 
   function toggle(obj, key, def) {
@@ -1463,10 +1478,11 @@ function buildSettingsContent() {
 
   function renderPerformance() {
     const p = cfg.settings.performance;
+    const locked = isLocked('performance');
     main.innerHTML = `
-      <div class="settings-page-title">Performance</div>
-      <div class="settings-page-desc">Reduce visual effects for lower-powered devices</div>
-      <div class="settings-section">
+      <div class="settings-page-title">Performance ${locked ? '<span class="settings-lock" title="Locked by system admin">LOCKED</span>' : ''}</div>
+      <div class="settings-page-desc">${locked ? 'These settings are managed by your system administrator' : 'Reduce visual effects for lower-powered devices'}</div>
+      <div class="settings-section ${locked ? 'settings-locked' : ''}">
         ${settingRow('Animations', 'Smooth transitions on windows, menus, previews', p.animations !== false, 'perf-anim')}
         ${settingRow('Dot Grid', 'Background dot pattern on desktop', p.dot_grid !== false, 'perf-dots')}
         ${settingRow('Backdrop Blur', 'Blur effect on start screen overlay', p.backdrop_blur !== false, 'perf-blur')}

@@ -24,7 +24,8 @@ async fn main() {
         .route("/api/files/mkdir", post(files::mkdir))
         .route("/api/files/touch", post(files::touch))
         .route("/api/user", get(get_user))
-        .route("/api/config", get(config::get_config).post(config::set_config));
+        .route("/api/config", get(config::get_config).post(config::set_config))
+        .route("/api/config/system", post(config::set_system_config));
 
     let app = api.fallback_service(ServeDir::new("frontend"));
 
