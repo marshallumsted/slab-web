@@ -1318,17 +1318,65 @@ function buildLogsContent() {
 function buildSettingsContent() {
   const el = document.createElement('div');
   el.className = 'settings-app';
+  el.innerHTML = `
+    <div class="settings-sidebar">
+      <div class="settings-nav"></div>
+    </div>
+    <div class="settings-main"></div>
+  `;
 
-  // load config, render, save on change
+  const nav = el.querySelector('.settings-nav');
+  const main = el.querySelector('.settings-main');
   let cfg = null;
+  let activeSection = 'general';
+
+  // section definitions
+  const sections = [
+    { id: 'general', label: 'General', group: 'slab' },
+    { id: 'performance', label: 'Performance', group: 'slab' },
+    { id: 'files', label: 'Files', group: 'apps' },
+    { id: 'terminal', label: 'Terminal', group: 'apps' },
+    { id: 'editor', label: 'Editor', group: 'apps' },
+    { id: 'sysmon', label: 'System Monitor', group: 'apps' },
+    { id: 'services', label: 'Services', group: 'apps' },
+    { id: 'logs', label: 'Log Viewer', group: 'apps' },
+    { id: 'network', label: 'Network', group: 'system' },
+    { id: 'about', label: 'About', group: 'system' },
+  ];
+
+  const groupLabels = { slab: 'Slab', apps: 'Apps', system: 'System' };
+
+  function renderNav() {
+    nav.innerHTML = '';
+    let lastGroup = '';
+    for (const sec of sections) {
+      if (sec.group !== lastGroup) {
+        lastGroup = sec.group;
+        const lbl = document.createElement('div');
+        lbl.className = 'settings-nav-label';
+        lbl.textContent = groupLabels[sec.group];
+        nav.appendChild(lbl);
+      }
+      const item = document.createElement('div');
+      item.className = 'settings-nav-item';
+      if (sec.id === activeSection) item.classList.add('active');
+      item.textContent = sec.label;
+      item.addEventListener('click', () => { activeSection = sec.id; renderNav(); renderSection(); });
+      nav.appendChild(item);
+    }
+  }
 
   async function load() {
     const res = await fetch('/api/config');
     cfg = await res.json();
-    if (!cfg.settings) cfg.settings = { performance: {}, files: {} };
+    if (!cfg.settings) cfg.settings = {};
     if (!cfg.settings.performance) cfg.settings.performance = {};
     if (!cfg.settings.files) cfg.settings.files = {};
-    render();
+    if (!cfg.settings.general) cfg.settings.general = {};
+    if (!cfg.settings.terminal) cfg.settings.terminal = {};
+    if (!cfg.settings.editor) cfg.settings.editor = {};
+    renderNav();
+    renderSection();
   }
 
   async function save() {
@@ -1343,54 +1391,181 @@ function buildSettingsContent() {
     const val = obj[key] !== undefined ? obj[key] : def;
     obj[key] = !val;
     save();
-    render();
+    renderSection();
     applySettings();
   }
 
-  function render() {
-    const p = cfg.settings.performance;
-    const f = cfg.settings.files;
-    el.innerHTML = `
+  function renderSection() {
+    const builders = {
+      general: renderGeneral,
+      performance: renderPerformance,
+      files: renderFiles,
+      terminal: renderTerminal,
+      editor: renderEditor,
+      sysmon: renderSysmon,
+      services: renderServices,
+      logs: renderLogs,
+      network: renderNetwork,
+      about: renderAbout,
+    };
+    main.innerHTML = '';
+    const builder = builders[activeSection];
+    if (builder) builder();
+    attachListeners();
+  }
+
+  function attachListeners() {
+    main.querySelectorAll('.settings-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const toggleMap = {
+          'perf-anim': [cfg.settings.performance, 'animations', true],
+          'perf-dots': [cfg.settings.performance, 'dot_grid', true],
+          'perf-blur': [cfg.settings.performance, 'backdrop_blur', true],
+          'files-imgprev': [cfg.settings.files, 'image_previews', true],
+          'files-vidprev': [cfg.settings.files, 'video_previews', true],
+          'files-hidden': [cfg.settings.files, 'show_hidden', false],
+          'term-bold': [cfg.settings.terminal, 'bold_is_bright', true],
+          'editor-wordwrap': [cfg.settings.editor, 'word_wrap', true],
+          'editor-linenums': [cfg.settings.editor, 'line_numbers', true],
+        };
+        const t = toggleMap[id];
+        if (t) toggle(t[0], t[1], t[2]);
+      });
+    });
+    main.querySelectorAll('.settings-select').forEach(sel => {
+      sel.addEventListener('change', () => {
+        const id = sel.dataset.id;
+        const selectMap = {
+          'files-defview': [cfg.settings.files, 'default_view'],
+          'term-fontsize': [cfg.settings.terminal, 'font_size'],
+          'editor-fontsize': [cfg.settings.editor, 'font_size'],
+          'general-theme': [cfg.settings.general, 'theme'],
+        };
+        const s = selectMap[id];
+        if (s) { s[0][s[1]] = sel.value; save(); applySettings(); }
+      });
+    });
+  }
+
+  // ── Section renderers ──
+
+  function renderGeneral() {
+    const g = cfg.settings.general || {};
+    main.innerHTML = `
+      <div class="settings-page-title">General</div>
+      <div class="settings-page-desc">Global slab preferences</div>
       <div class="settings-section">
-        <div class="settings-section-title">Performance</div>
-        <div class="settings-section-desc">Reduce visual effects for lower-powered devices</div>
+        ${settingSelect('Theme', 'Color scheme for the desktop', g.theme || 'dark', [['dark', 'Dark (default)'], ['light', 'Light (coming soon)']], 'general-theme')}
+      </div>
+    `;
+  }
+
+  function renderPerformance() {
+    const p = cfg.settings.performance;
+    main.innerHTML = `
+      <div class="settings-page-title">Performance</div>
+      <div class="settings-page-desc">Reduce visual effects for lower-powered devices</div>
+      <div class="settings-section">
         ${settingRow('Animations', 'Smooth transitions on windows, menus, previews', p.animations !== false, 'perf-anim')}
         ${settingRow('Dot Grid', 'Background dot pattern on desktop', p.dot_grid !== false, 'perf-dots')}
         ${settingRow('Backdrop Blur', 'Blur effect on start screen overlay', p.backdrop_blur !== false, 'perf-blur')}
       </div>
+    `;
+  }
+
+  function renderFiles() {
+    const f = cfg.settings.files;
+    main.innerHTML = `
+      <div class="settings-page-title">Files</div>
+      <div class="settings-page-desc">File browser behavior and display</div>
       <div class="settings-section">
-        <div class="settings-section-title">Files</div>
-        <div class="settings-section-desc">File browser behavior</div>
         ${settingRow('Image Previews', 'Show thumbnail previews for image files', f.image_previews !== false, 'files-imgprev')}
         ${settingRow('Video Previews', 'Generate thumbnails for video files (requires ffmpeg)', f.video_previews !== false, 'files-vidprev')}
         ${settingRow('Show Hidden Files', 'Display dotfiles and hidden directories', f.show_hidden === true, 'files-hidden')}
         ${settingSelect('Default View', 'Initial view mode when opening file browser', f.default_view || 'list', [['list', 'List'], ['grid', 'Grid']], 'files-defview')}
       </div>
     `;
-
-    // attach toggle listeners
-    el.querySelectorAll('.settings-toggle').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.id;
-        const map = {
-          'perf-anim': () => toggle(p, 'animations', true),
-          'perf-dots': () => toggle(p, 'dot_grid', true),
-          'perf-blur': () => toggle(p, 'backdrop_blur', true),
-          'files-imgprev': () => toggle(f, 'image_previews', true),
-          'files-vidprev': () => toggle(f, 'video_previews', true),
-          'files-hidden': () => toggle(f, 'show_hidden', false),
-        };
-        if (map[id]) map[id]();
-      });
-    });
-
-    el.querySelectorAll('.settings-select').forEach(sel => {
-      sel.addEventListener('change', () => {
-        const id = sel.dataset.id;
-        if (id === 'files-defview') { f.default_view = sel.value; save(); }
-      });
-    });
   }
+
+  function renderTerminal() {
+    const t = cfg.settings.terminal || {};
+    main.innerHTML = `
+      <div class="settings-page-title">Terminal</div>
+      <div class="settings-page-desc">Terminal emulator settings</div>
+      <div class="settings-section">
+        ${settingSelect('Font Size', 'Terminal font size in pixels', t.font_size || '14', [['12', '12px'], ['13', '13px'], ['14', '14px (default)'], ['15', '15px'], ['16', '16px'], ['18', '18px']], 'term-fontsize')}
+        ${settingRow('Bold is Bright', 'Use bright colors for bold text', t.bold_is_bright !== false, 'term-bold')}
+      </div>
+    `;
+  }
+
+  function renderEditor() {
+    const e = cfg.settings.editor || {};
+    main.innerHTML = `
+      <div class="settings-page-title">Editor</div>
+      <div class="settings-page-desc">Text editor preferences</div>
+      <div class="settings-section">
+        ${settingSelect('Font Size', 'Editor font size in pixels', e.font_size || '14', [['12', '12px'], ['13', '13px'], ['14', '14px (default)'], ['15', '15px'], ['16', '16px'], ['18', '18px']], 'editor-fontsize')}
+        ${settingRow('Word Wrap', 'Wrap long lines to fit the window', e.word_wrap !== false, 'editor-wordwrap')}
+        ${settingRow('Line Numbers', 'Show line numbers in the gutter', e.line_numbers !== false, 'editor-linenums')}
+      </div>
+    `;
+  }
+
+  function renderSysmon() {
+    main.innerHTML = `
+      <div class="settings-page-title">System Monitor</div>
+      <div class="settings-page-desc">Dashboard display options</div>
+      <div class="settings-section">
+        <div class="settings-row"><div class="settings-row-info"><div class="settings-row-name" style="color:var(--gray-500);">No settings yet</div><div class="settings-row-desc">Settings will appear here as features are built</div></div></div>
+      </div>
+    `;
+  }
+
+  function renderServices() {
+    main.innerHTML = `
+      <div class="settings-page-title">Services</div>
+      <div class="settings-page-desc">Service manager options</div>
+      <div class="settings-section">
+        <div class="settings-row"><div class="settings-row-info"><div class="settings-row-name" style="color:var(--gray-500);">No settings yet</div><div class="settings-row-desc">Settings will appear here as features are built</div></div></div>
+      </div>
+    `;
+  }
+
+  function renderLogs() {
+    main.innerHTML = `
+      <div class="settings-page-title">Log Viewer</div>
+      <div class="settings-page-desc">Journal log display</div>
+      <div class="settings-section">
+        <div class="settings-row"><div class="settings-row-info"><div class="settings-row-name" style="color:var(--gray-500);">No settings yet</div><div class="settings-row-desc">Settings will appear here as features are built</div></div></div>
+      </div>
+    `;
+  }
+
+  function renderNetwork() {
+    main.innerHTML = `
+      <div class="settings-page-title">Network</div>
+      <div class="settings-page-desc">Network places and connections</div>
+      <div class="settings-section">
+        <div class="settings-row"><div class="settings-row-info"><div class="settings-row-name">Configured sources</div><div class="settings-row-desc">${cfg.network.length} network place${cfg.network.length !== 1 ? 's' : ''} — managed from the Files sidebar</div></div></div>
+      </div>
+    `;
+  }
+
+  function renderAbout() {
+    main.innerHTML = `
+      <div class="settings-page-title">About</div>
+      <div class="settings-section">
+        <div class="settings-row"><div class="settings-row-info"><div class="settings-row-name">slab</div><div class="settings-row-desc">A brutalist webtop</div></div></div>
+        <div class="settings-row"><div class="settings-row-info"><div class="settings-row-name">Version</div><div class="settings-row-desc">0.1.0</div></div></div>
+        <div class="settings-row"><div class="settings-row-info"><div class="settings-row-name">Stack</div><div class="settings-row-desc">Rust (axum + tokio) / HTML / CSS / JS</div></div></div>
+        <div class="settings-row"><div class="settings-row-info"><div class="settings-row-name">Config</div><div class="settings-row-desc">~/.config/slab/config.json</div></div></div>
+      </div>
+    `;
+  }
+
+  // ── Helpers ──
 
   function settingRow(name, desc, on, id) {
     return `

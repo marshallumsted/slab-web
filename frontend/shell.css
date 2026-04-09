@@ -225,7 +225,8 @@
   scrollbar-color: var(--gray-700) transparent;
 }
 
-.window-body:has(.files-app) {
+.window-body:has(.files-app),
+.window-body:has(.settings-app) {
   padding: 0;
   overflow: hidden;
 }
@@ -900,36 +901,80 @@ select.files-dialog-input {
   font-family: var(--font-mono);
   font-size: .75rem;
   display: flex;
-  flex-direction: column;
-  gap: 0;
+  flex-direction: row;
   height: 100%;
+}
+
+.settings-sidebar {
+  width: 160px;
+  flex-shrink: 0;
+  background: var(--gray-900);
+  border-right: 1px solid var(--gray-800);
   overflow-y: auto;
+  padding: 8px 0;
   scrollbar-width: thin;
   scrollbar-color: var(--gray-700) transparent;
 }
 
+.settings-nav-label {
+  font-size: .5rem;
+  color: var(--gray-500);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 8px 12px 4px;
+}
+
+.settings-nav-item {
+  padding: 5px 12px;
+  color: var(--gray-300);
+  cursor: pointer;
+  font-size: .7rem;
+  transition: background .1s, color .1s;
+}
+
+.settings-nav-item:hover {
+  background: var(--gray-800);
+  color: var(--white);
+}
+
+.settings-nav-item.active {
+  background: var(--gray-800);
+  color: var(--white);
+  border-left: 2px solid var(--red);
+}
+
+.settings-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-700) transparent;
+}
+
+.settings-page-title {
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--white);
+  margin-bottom: 2px;
+}
+
+.settings-page-desc {
+  font-size: .6rem;
+  color: var(--gray-500);
+  margin-bottom: 16px;
+}
+
 .settings-section {
-  padding: 16px 0;
+  padding: 0 0 12px;
+  margin-bottom: 12px;
   border-bottom: 1px solid var(--gray-800);
 }
 
 .settings-section:last-child {
   border-bottom: none;
-}
-
-.settings-section-title {
-  font-size: .7rem;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--red);
-  margin-bottom: 2px;
-}
-
-.settings-section-desc {
-  font-size: .6rem;
-  color: var(--gray-500);
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .settings-row {
