@@ -897,6 +897,128 @@ select.files-dialog-input {
   margin: 4px 0;
 }
 
+/* ── Editor ── */
+
+.editor-app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--gray-900);
+  border-bottom: 1px solid var(--gray-800);
+  flex-shrink: 0;
+  height: 30px;
+  padding-right: 8px;
+}
+
+.editor-tabs {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+  height: 100%;
+}
+
+.editor-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 10px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  color: var(--gray-500);
+  border-right: 1px solid var(--gray-800);
+  transition: background .1s, color .1s;
+  white-space: nowrap;
+}
+
+.editor-tab:hover {
+  background: var(--gray-800);
+  color: var(--gray-300);
+}
+
+.editor-tab.active {
+  background: var(--gray-800);
+  color: var(--white);
+  border-bottom: 2px solid var(--red);
+}
+
+.editor-tab.modified .editor-tab-name {
+  color: var(--red);
+}
+
+.editor-tab-name {
+  user-select: none;
+}
+
+.editor-tab-close {
+  font-size: .7rem;
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: color .1s;
+}
+
+.editor-tab-close:hover {
+  color: var(--red);
+}
+
+.editor-tab-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 8px;
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: color .1s;
+}
+
+.editor-tab-add:hover {
+  color: var(--white);
+}
+
+.editor-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.editor-lang {
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  color: var(--gray-500);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.editor-status {
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  color: var(--gray-500);
+}
+
+.editor-container {
+  flex: 1;
+  min-height: 0;
+}
+
+.window-body:has(.editor-app) {
+  padding: 0;
+  overflow: hidden;
+}
+
 /* ── System Monitor ── */
 
 .sysmon-app {

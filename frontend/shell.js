@@ -76,7 +76,7 @@ const apps = [
     name: 'Editor',
     color: 'white',
     tile: 'normal',
-    launch: () => createWindow('editor', 'Text Editor', buildEditorContent(), 600, 500),
+    launch: () => createWindow('editor', 'Editor', buildEditorContent(), 800, 550),
   },
   {
     id: 'services',
@@ -970,6 +970,8 @@ function buildFilesContent() {
     const fullPath = currentPath + '/' + entry.name;
     if (isImageFile(entry.name) || isVideoFile(entry.name)) {
       openMediaViewer(currentPath, entry.name);
+    } else {
+      openInEditor(fullPath);
     }
   }
 
@@ -1416,13 +1418,261 @@ function formatDate(epoch) {
   return `${mo}-${day} ${h}:${m}`;
 }
 
-function buildEditorContent() {
+function openInEditor(filePath) {
+  const content = buildEditorContent(filePath);
+  const name = filePath.split('/').pop();
+  createWindow('editor', name, content, 800, 550);
+}
+
+function buildEditorContent(initialFile) {
   const el = document.createElement('div');
-  el.style.cssText = 'height:100%;display:flex;flex-direction:column;';
+  el.className = 'editor-app';
   el.innerHTML = `
-    <div style="font-family:var(--font-mono);font-size:.65rem;color:var(--gray-500);padding-bottom:.5rem;border-bottom:1px solid var(--gray-800);margin-bottom:.5rem;letter-spacing:.06em;text-transform:uppercase;">untitled</div>
-    <textarea style="flex:1;background:transparent;border:none;color:var(--gray-300);font-family:var(--font-mono);font-size:.8rem;line-height:1.7;resize:none;outline:none;" placeholder="start typing..."></textarea>
+    <div class="editor-toolbar">
+      <div class="editor-tabs" id="ed-tabs"></div>
+      <div class="editor-toolbar-right">
+        <span class="editor-lang" id="ed-lang"></span>
+        <span class="editor-status" id="ed-status"></span>
+      </div>
+    </div>
+    <div class="editor-container" id="ed-container"></div>
   `;
+
+  const tabsEl = el.querySelector('#ed-tabs');
+  const langEl = el.querySelector('#ed-lang');
+  const statusEl = el.querySelector('#ed-status');
+  const containerEl = el.querySelector('#ed-container');
+
+  let editor = null;
+  let tabs = []; // { path, name, model, modified }
+  let activeTab = -1;
+  let monacoReady = false;
+
+  // extension → Monaco language
+  const langMap = {
+    js: 'javascript', jsx: 'javascript', ts: 'typescript', tsx: 'typescript',
+    py: 'python', rs: 'rust', go: 'go', java: 'java', c: 'c', cpp: 'cpp', h: 'cpp',
+    cs: 'csharp', rb: 'ruby', php: 'php', swift: 'swift', kt: 'kotlin',
+    html: 'html', htm: 'html', css: 'css', scss: 'scss', less: 'less',
+    json: 'json', xml: 'xml', yaml: 'yaml', yml: 'yaml', toml: 'ini',
+    md: 'markdown', sql: 'sql', sh: 'shell', bash: 'shell', zsh: 'shell', fish: 'shell',
+    dockerfile: 'dockerfile', makefile: 'makefile',
+    txt: 'plaintext', log: 'plaintext', conf: 'ini', cfg: 'ini', ini: 'ini',
+    lua: 'lua', r: 'r', dart: 'dart', zig: 'rust',
+  };
+
+  function getLang(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    return langMap[ext] || 'plaintext';
+  }
+
+  function initMonaco() {
+    if (typeof require === 'undefined') {
+      statusEl.textContent = 'loading monaco...';
+      setTimeout(initMonaco, 200);
+      return;
+    }
+
+    require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' } });
+    require(['vs/editor/editor.main'], function () {
+      monacoReady = true;
+
+      // define slab dark theme
+      monaco.editor.defineTheme('slab-dark', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [],
+        colors: {
+          'editor.background': '#111111',
+          'editor.lineHighlightBackground': '#1a1a1a',
+          'editorLineNumber.foreground': '#444444',
+          'editorLineNumber.activeForeground': '#999999',
+          'editor.selectionBackground': '#e6322744',
+          'editorCursor.foreground': '#e63227',
+          'editorWidget.background': '#1a1a1a',
+          'editorWidget.border': '#333333',
+          'input.background': '#1a1a1a',
+          'input.border': '#333333',
+          'dropdown.background': '#1a1a1a',
+          'list.activeSelectionBackground': '#333333',
+          'list.hoverBackground': '#1a1a1a',
+        },
+      });
+
+      monaco.editor.defineTheme('slab-light', {
+        base: 'vs',
+        inherit: true,
+        rules: [],
+        colors: {
+          'editor.background': '#f5f5f5',
+          'editor.lineHighlightBackground': '#e8e8e8',
+          'editorLineNumber.foreground': '#bbbbbb',
+          'editorLineNumber.activeForeground': '#555555',
+          'editor.selectionBackground': '#e6322733',
+          'editorCursor.foreground': '#e63227',
+        },
+      });
+
+      const theme = document.body.classList.contains('theme-light') ? 'slab-light' : 'slab-dark';
+
+      editor = monaco.editor.create(containerEl, {
+        value: '',
+        language: 'plaintext',
+        theme: theme,
+        fontFamily: "'Space Mono', monospace",
+        fontSize: 14,
+        minimap: { enabled: true },
+        lineNumbers: 'on',
+        wordWrap: 'on',
+        scrollBeyondLastLine: false,
+        automaticLayout: true,
+        tabSize: 2,
+        renderWhitespace: 'selection',
+        bracketPairColorization: { enabled: true },
+        smoothScrolling: true,
+      });
+
+      // Ctrl+S to save
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        saveCurrentTab();
+      });
+
+      // track modifications
+      editor.onDidChangeModelContent(() => {
+        if (activeTab >= 0 && tabs[activeTab]) {
+          tabs[activeTab].modified = true;
+          renderTabs();
+        }
+      });
+
+      // cursor position
+      editor.onDidChangeCursorPosition((e) => {
+        statusEl.textContent = `Ln ${e.position.lineNumber}, Col ${e.position.column}`;
+      });
+
+      // open initial file or blank
+      if (initialFile) {
+        openFile(initialFile);
+      } else {
+        newTab();
+      }
+    });
+  }
+
+  async function openFile(path) {
+    // check if already open
+    const existing = tabs.findIndex(t => t.path === path);
+    if (existing >= 0) {
+      switchTab(existing);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/files/read?path=${encodeURIComponent(path)}`);
+      if (!res.ok) throw new Error();
+      const content = await res.text();
+      const name = path.split('/').pop();
+      const lang = getLang(name);
+
+      const model = monaco.editor.createModel(content, lang);
+      tabs.push({ path, name, model, modified: false });
+      switchTab(tabs.length - 1);
+    } catch {
+      statusEl.textContent = 'failed to open file';
+    }
+  }
+
+  function newTab() {
+    const model = monaco.editor.createModel('', 'plaintext');
+    tabs.push({ path: null, name: 'untitled', model, modified: false });
+    switchTab(tabs.length - 1);
+  }
+
+  function switchTab(idx) {
+    if (idx < 0 || idx >= tabs.length) return;
+    activeTab = idx;
+    const tab = tabs[idx];
+    editor.setModel(tab.model);
+    langEl.textContent = tab.model.getLanguageId();
+    renderTabs();
+  }
+
+  function closeTab(idx) {
+    const tab = tabs[idx];
+    tab.model.dispose();
+    tabs.splice(idx, 1);
+    if (tabs.length === 0) {
+      newTab();
+    } else if (activeTab >= tabs.length) {
+      switchTab(tabs.length - 1);
+    } else {
+      switchTab(Math.min(activeTab, tabs.length - 1));
+    }
+  }
+
+  async function saveCurrentTab() {
+    if (activeTab < 0) return;
+    const tab = tabs[activeTab];
+    const content = tab.model.getValue();
+
+    if (!tab.path) {
+      statusEl.textContent = 'no file path — use File Browser to open';
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/files/write', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: tab.path, content }),
+      });
+      if (res.ok) {
+        tab.modified = false;
+        renderTabs();
+        statusEl.textContent = 'saved';
+        setTimeout(() => {
+          if (statusEl.textContent === 'saved') statusEl.textContent = '';
+        }, 2000);
+      } else {
+        statusEl.textContent = 'save failed';
+      }
+    } catch {
+      statusEl.textContent = 'save failed';
+    }
+  }
+
+  function renderTabs() {
+    tabsEl.innerHTML = '';
+    tabs.forEach((tab, i) => {
+      const t = document.createElement('div');
+      t.className = 'editor-tab';
+      if (i === activeTab) t.classList.add('active');
+      if (tab.modified) t.classList.add('modified');
+
+      const name = document.createElement('span');
+      name.className = 'editor-tab-name';
+      name.textContent = (tab.modified ? '\u2022 ' : '') + tab.name;
+      name.addEventListener('click', () => switchTab(i));
+
+      const close = document.createElement('span');
+      close.className = 'editor-tab-close';
+      close.textContent = '\u00d7';
+      close.addEventListener('click', (e) => { e.stopPropagation(); closeTab(i); });
+
+      t.appendChild(name);
+      t.appendChild(close);
+      tabsEl.appendChild(t);
+    });
+
+    // + button
+    const addBtn = document.createElement('div');
+    addBtn.className = 'editor-tab-add';
+    addBtn.textContent = '+';
+    addBtn.addEventListener('click', newTab);
+    tabsEl.appendChild(addBtn);
+  }
+
+  initMonaco();
   return el;
 }
 

@@ -24,6 +24,8 @@ async fn main() {
         .route("/api/files/move", post(files::move_files))
         .route("/api/files/delete", post(files::delete))
         .route("/api/files/mkdir", post(files::mkdir))
+        .route("/api/files/read", get(files::read_text))
+        .route("/api/files/write", post(files::write_text))
         .route("/api/files/touch", post(files::touch))
         .route("/api/user", get(get_user))
         .route("/api/config", get(config::get_config).post(config::set_config))

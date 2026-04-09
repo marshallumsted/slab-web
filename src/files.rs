@@ -201,6 +201,37 @@ pub async fn download(Query(params): Query<RawParams>) -> impl IntoResponse {
     (StatusCode::OK, headers, bytes)
 }
 
+// read file as text
+pub async fn read_text(Query(params): Query<RawParams>) -> impl IntoResponse {
+    let path = PathBuf::from(&params.path);
+    let path = match path.canonicalize() {
+        Ok(p) => p,
+        Err(_) => return (StatusCode::NOT_FOUND, HeaderMap::new(), String::new()),
+    };
+    match std::fs::read_to_string(&path) {
+        Ok(content) => {
+            let mut headers = HeaderMap::new();
+            headers.insert(header::CONTENT_TYPE, "text/plain; charset=utf-8".parse().unwrap());
+            (StatusCode::OK, headers, content)
+        }
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, HeaderMap::new(), String::new()),
+    }
+}
+
+// write file text
+#[derive(Deserialize)]
+pub struct WriteBody {
+    pub path: String,
+    pub content: String,
+}
+
+pub async fn write_text(Json(body): Json<WriteBody>) -> StatusCode {
+    match std::fs::write(&body.path, &body.content) {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
 // ── File operations ──
 
 #[derive(Deserialize)]
