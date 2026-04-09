@@ -45,7 +45,8 @@ async fn main() {
         .route("/api/setup/install-all", get(setup::install_all_cmd))
         .route("/api/xbridge/status", get(xbridge::status))
         .route("/api/xbridge/launch", post(xbridge::launch))
-        .route("/api/xbridge/stop", post(xbridge::stop));
+        .route("/api/xbridge/stop", post(xbridge::stop))
+        .route("/api/xbridge/proxy/{port}/{*path}", get(xbridge::proxy));
 
     let app = api.fallback_service(ServeDir::new("frontend"));
 

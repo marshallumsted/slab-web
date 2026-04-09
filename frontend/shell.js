@@ -2909,35 +2909,52 @@ async function launchInXbridge(exec, name) {
     if (!res.ok) return;
     const data = await res.json();
 
-    // give xpra a moment to start
-    setTimeout(() => {
-      const el = document.createElement('div');
-      el.className = 'xbridge-app';
-      el.innerHTML = `
-        <div class="xbridge-loading">Connecting to ${name}...</div>
-        <iframe class="xbridge-frame" src="http://${location.hostname}:${data.port}/"></iframe>
-      `;
+    // create window immediately with loading state
+    const el = document.createElement('div');
+    el.className = 'xbridge-app';
+    el.innerHTML = `<div class="xbridge-loading">Starting ${name}...</div>`;
 
-      const iframe = el.querySelector('iframe');
-      iframe.onload = () => {
-        el.querySelector('.xbridge-loading')?.remove();
-      };
+    const win = createWindow('xbridge', name, el, 800, 600);
 
-      const win = createWindow('xbridge', name, el, 800, 600);
+    // poll the proxy until xpra's HTML5 client is ready
+    const proxyUrl = `/api/xbridge/proxy/${data.port}/index.html`;
+    let attempts = 0;
+    const maxAttempts = 30; // 30 x 1s = 30s timeout
 
-      // cleanup on window close — stop the xpra session
-      const observer = new MutationObserver(() => {
-        if (!document.contains(win)) {
-          fetch('/api/xbridge/stop', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: data.id }),
-          });
-          observer.disconnect();
+    const poll = setInterval(async () => {
+      attempts++;
+      try {
+        const check = await fetch(proxyUrl, { method: 'HEAD' });
+        if (check.ok) {
+          clearInterval(poll);
+          el.innerHTML = `<iframe class="xbridge-frame" src="${proxyUrl}"></iframe>`;
+        } else if (attempts >= maxAttempts) {
+          clearInterval(poll);
+          el.innerHTML = `<div class="xbridge-loading" style="color:var(--red);">Failed to connect to ${name}</div>`;
+        } else {
+          el.querySelector('.xbridge-loading').textContent = `Starting ${name}... (${attempts}s)`;
         }
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
-    }, 2000);
+      } catch {
+        if (attempts >= maxAttempts) {
+          clearInterval(poll);
+          el.innerHTML = `<div class="xbridge-loading" style="color:var(--red);">Failed to connect to ${name}</div>`;
+        }
+      }
+    }, 1000);
+
+    // cleanup on window close
+    const observer = new MutationObserver(() => {
+      if (!document.contains(win)) {
+        clearInterval(poll);
+        fetch('/api/xbridge/stop', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: data.id }),
+        });
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
   } catch {}
 }
 
