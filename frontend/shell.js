@@ -2379,6 +2379,8 @@ function buildSettingsContent() {
   }
 
   function renderSetupData(data) {
+    const required = data.items.filter(i => i.required);
+    const optional = data.items.filter(i => !i.required);
     const installed = data.items.filter(i => i.installed);
     const missing = data.items.filter(i => !i.installed);
     const installable = missing.filter(i => !i.install_cmd.startsWith('#'));
@@ -2403,19 +2405,35 @@ function buildSettingsContent() {
       `;
     }
 
-    if (missing.length > 0) {
-      html += '<div class="settings-section"><div class="sysmon-section-title" style="color:var(--red);">Missing</div>';
-      for (const item of missing) {
-        html += setupItemHtml(item);
-      }
+    // required
+    const reqMissing = required.filter(i => !i.installed);
+    const reqInstalled = required.filter(i => i.installed);
+    if (required.length > 0) {
+      html += '<div class="settings-section"><div class="sysmon-section-title">Required</div>';
+      for (const item of reqMissing) html += setupItemHtml(item);
+      for (const item of reqInstalled) html += setupItemHtml(item);
       html += '</div>';
     }
 
-    if (installed.length > 0) {
-      html += '<div class="settings-section"><div class="sysmon-section-title">Installed</div>';
-      for (const item of installed) {
-        html += setupItemHtml(item);
-      }
+    // runtime deps
+    const runtime = optional.filter(i => ['xpra','xpra-html5','ffmpeg','git'].includes(i.id));
+    const runtimeMissing = runtime.filter(i => !i.installed);
+    const runtimeInstalled = runtime.filter(i => i.installed);
+    if (runtime.length > 0) {
+      html += '<div class="settings-section"><div class="sysmon-section-title">Runtime Dependencies</div>';
+      for (const item of runtimeMissing) html += setupItemHtml(item);
+      for (const item of runtimeInstalled) html += setupItemHtml(item);
+      html += '</div>';
+    }
+
+    // optional
+    const extras = optional.filter(i => !['xpra','xpra-html5','ffmpeg','git'].includes(i.id));
+    const extrasMissing = extras.filter(i => !i.installed);
+    const extrasInstalled = extras.filter(i => i.installed);
+    if (extras.length > 0) {
+      html += '<div class="settings-section"><div class="sysmon-section-title">Optional</div>';
+      for (const item of extrasMissing) html += setupItemHtml(item);
+      for (const item of extrasInstalled) html += setupItemHtml(item);
       html += '</div>';
     }
 

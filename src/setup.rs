@@ -23,63 +23,33 @@ pub async fn get_status() -> Json<SetupStatus> {
     let (distro, pkg_manager) = detect_distro();
 
     let items = vec![
-        check_tool(
-            "xpra",
-            "Xpra",
-            "Stream native GUI apps into slab windows (X Bridge)",
-            false,
-            &pkg_manager,
-            &[("pacman", "sudo pacman -S xpra"), ("apt", "sudo apt install xpra"), ("dnf", "sudo dnf install xpra"), ("zypper", "sudo zypper install xpra")],
-        ),
-        check_path_exists(
-            "/usr/share/xpra/www/index.html",
-            "xpra-html5",
-            "Xpra HTML5 Client",
-            "Browser-based viewer for X Bridge (required for xpra in slab)",
-            &pkg_manager,
-            &[("pacman", "yay -S xpra-html5"), ("apt", "sudo apt install xpra-html5"), ("dnf", "sudo dnf install xpra-html5"), ("zypper", "sudo zypper install xpra-html5")],
-        ),
-        check_tool(
-            "ffmpeg",
-            "FFmpeg",
-            "Video thumbnails in file browser and media viewer",
-            false,
-            &pkg_manager,
-            &[("pacman", "sudo pacman -S ffmpeg"), ("apt", "sudo apt install ffmpeg"), ("dnf", "sudo dnf install ffmpeg"), ("zypper", "sudo zypper install ffmpeg")],
-        ),
-        check_tool(
-            "fish",
-            "Fish Shell",
-            "Friendly interactive shell (optional terminal default)",
-            false,
-            &pkg_manager,
-            &[("pacman", "sudo pacman -S fish"), ("apt", "sudo apt install fish"), ("dnf", "sudo dnf install fish"), ("zypper", "sudo zypper install fish")],
-        ),
-        check_tool(
-            "btop",
-            "btop",
-            "Resource monitor — runs inside slab terminal",
-            false,
-            &pkg_manager,
-            &[("pacman", "sudo pacman -S btop"), ("apt", "sudo apt install btop"), ("dnf", "sudo dnf install btop"), ("zypper", "sudo zypper install btop")],
-        ),
-        check_tool(
-            "docker",
-            "Docker",
-            "Container management (planned feature)",
-            false,
-            &pkg_manager,
-            &[("pacman", "sudo pacman -S docker"), ("apt", "sudo apt install docker.io"), ("dnf", "sudo dnf install docker"), ("zypper", "sudo zypper install docker")],
-        ),
-        check_tool(
-            "podman",
-            "Podman",
-            "Rootless container runtime (Docker alternative)",
-            false,
-            &pkg_manager,
-            &[("pacman", "sudo pacman -S podman"), ("apt", "sudo apt install podman"), ("dnf", "sudo dnf install podman"), ("zypper", "sudo zypper install podman")],
-        ),
+        // ── Required for slab to build/run ──
+        check_tool("cargo", "Rust/Cargo", "Build toolchain for slab (required to compile from source)", true, &pkg_manager,
+            &[("pacman", "sudo pacman -S rust"), ("apt", "sudo apt install cargo"), ("dnf", "sudo dnf install cargo"), ("zypper", "sudo zypper install cargo")]),
         check_systemd(),
+
+        // ── Runtime dependencies (used by slab features) ──
+        check_tool("xpra", "Xpra", "Stream native GUI apps into slab windows (X Bridge)", false, &pkg_manager,
+            &[("pacman", "sudo pacman -S xpra"), ("apt", "sudo apt install xpra"), ("dnf", "sudo dnf install xpra"), ("zypper", "sudo zypper install xpra")]),
+        check_path_exists("/usr/share/xpra/www/index.html", "xpra-html5", "Xpra HTML5 Client",
+            "Browser-based viewer for X Bridge — required for running desktop apps in slab", &pkg_manager,
+            &[("pacman", "yay -S xpra-html5"), ("apt", "sudo apt install xpra-html5"), ("dnf", "sudo dnf install xpra-html5"), ("zypper", "sudo zypper install xpra-html5")]),
+        check_tool("ffmpeg", "FFmpeg", "Video thumbnails in file browser and media viewer", false, &pkg_manager,
+            &[("pacman", "sudo pacman -S ffmpeg"), ("apt", "sudo apt install ffmpeg"), ("dnf", "sudo dnf install ffmpeg"), ("zypper", "sudo zypper install ffmpeg")]),
+        check_tool("git", "Git", "Version control — used for updates and development", false, &pkg_manager,
+            &[("pacman", "sudo pacman -S git"), ("apt", "sudo apt install git"), ("dnf", "sudo dnf install git"), ("zypper", "sudo zypper install git")]),
+
+        // ── Optional tools ──
+        check_tool("fish", "Fish Shell", "Friendly interactive shell (optional terminal default)", false, &pkg_manager,
+            &[("pacman", "sudo pacman -S fish"), ("apt", "sudo apt install fish"), ("dnf", "sudo dnf install fish"), ("zypper", "sudo zypper install fish")]),
+        check_tool("btop", "btop", "Resource monitor — runs inside slab terminal", false, &pkg_manager,
+            &[("pacman", "sudo pacman -S btop"), ("apt", "sudo apt install btop"), ("dnf", "sudo dnf install btop"), ("zypper", "sudo zypper install btop")]),
+        check_tool("docker", "Docker", "Container management (planned feature)", false, &pkg_manager,
+            &[("pacman", "sudo pacman -S docker"), ("apt", "sudo apt install docker.io"), ("dnf", "sudo dnf install docker"), ("zypper", "sudo zypper install docker")]),
+        check_tool("podman", "Podman", "Rootless container runtime (Docker alternative)", false, &pkg_manager,
+            &[("pacman", "sudo pacman -S podman"), ("apt", "sudo apt install podman"), ("dnf", "sudo dnf install podman"), ("zypper", "sudo zypper install podman")]),
+
+        // ── System config ──
         check_dir("/etc/slab", "System Config", "System-wide slab config directory (/etc/slab)", "sudo mkdir -p /etc/slab"),
     ];
 
@@ -274,10 +244,12 @@ fn get_status_inner(pkg_manager: &str) -> Vec<SetupItem> {
     vec![
         check_tool("xpra", "Xpra", "X Bridge", false, pkg_manager,
             &[("pacman", "sudo pacman -S xpra"), ("apt", "sudo apt install xpra"), ("dnf", "sudo dnf install xpra"), ("zypper", "sudo zypper install xpra")]),
-        check_path_exists("/usr/share/xpra/www/index.html", "xpra-html5", "Xpra HTML5", "Browser viewer for X Bridge", pkg_manager,
+        check_path_exists("/usr/share/xpra/www/index.html", "xpra-html5", "Xpra HTML5", "X Bridge viewer", pkg_manager,
             &[("pacman", "yay -S xpra-html5"), ("apt", "sudo apt install xpra-html5"), ("dnf", "sudo dnf install xpra-html5"), ("zypper", "sudo zypper install xpra-html5")]),
-        check_tool("ffmpeg", "FFmpeg", "Video thumbnails", false, pkg_manager,
+        check_tool("ffmpeg", "FFmpeg", "Thumbnails", false, pkg_manager,
             &[("pacman", "sudo pacman -S ffmpeg"), ("apt", "sudo apt install ffmpeg"), ("dnf", "sudo dnf install ffmpeg"), ("zypper", "sudo zypper install ffmpeg")]),
+        check_tool("git", "Git", "Version control", false, pkg_manager,
+            &[("pacman", "sudo pacman -S git"), ("apt", "sudo apt install git"), ("dnf", "sudo dnf install git"), ("zypper", "sudo zypper install git")]),
         check_tool("fish", "Fish Shell", "Shell", false, pkg_manager,
             &[("pacman", "sudo pacman -S fish"), ("apt", "sudo apt install fish"), ("dnf", "sudo dnf install fish"), ("zypper", "sudo zypper install fish")]),
         check_tool("btop", "btop", "Monitor", false, pkg_manager,
