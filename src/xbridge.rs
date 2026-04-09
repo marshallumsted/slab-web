@@ -80,11 +80,17 @@ fn find_free_display() -> u32 {
     100
 }
 
+fn xpra_html5_available() -> bool {
+    // check common paths for the HTML5 client
+    std::path::Path::new("/usr/share/xpra/www/index.html").exists()
+        || std::path::Path::new("/usr/share/xpra-html5/index.html").exists()
+}
+
 pub async fn status() -> Json<BridgeStatus> {
     let version = xpra_version().unwrap_or_default();
     let sessions = SESSIONS.lock().unwrap().values().cloned().collect();
     Json(BridgeStatus {
-        available: !version.is_empty(),
+        available: !version.is_empty() && xpra_html5_available(),
         version,
         sessions,
     })

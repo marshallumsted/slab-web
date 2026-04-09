@@ -2884,8 +2884,8 @@ function showXbridgePrompt() {
     <div class="files-dialog-box" style="width:340px;">
       <div class="files-dialog-title">Xpra Required</div>
       <div style="font-size:.7rem;color:var(--gray-300);line-height:1.6;margin-bottom:8px;">
-        System apps run inside slab via Xpra.<br>
-        Install it from Settings > Setup to enable this feature.
+        System apps run inside slab via Xpra and its HTML5 client.<br>
+        Install both from Settings > Setup to enable this feature.
       </div>
       <div class="files-dialog-actions">
         <button class="files-dialog-btn files-dialog-cancel">Close</button>

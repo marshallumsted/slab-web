@@ -31,6 +31,14 @@ pub async fn get_status() -> Json<SetupStatus> {
             &pkg_manager,
             &[("pacman", "sudo pacman -S xpra"), ("apt", "sudo apt install xpra"), ("dnf", "sudo dnf install xpra"), ("zypper", "sudo zypper install xpra")],
         ),
+        check_path_exists(
+            "/usr/share/xpra/www/index.html",
+            "xpra-html5",
+            "Xpra HTML5 Client",
+            "Browser-based viewer for X Bridge (required for xpra in slab)",
+            &pkg_manager,
+            &[("pacman", "yay -S xpra-html5"), ("apt", "sudo apt install xpra-html5"), ("dnf", "sudo dnf install xpra-html5"), ("zypper", "sudo zypper install xpra-html5")],
+        ),
         check_tool(
             "ffmpeg",
             "FFmpeg",
@@ -167,6 +175,24 @@ fn check_systemd() -> SetupItem {
     }
 }
 
+fn check_path_exists(path: &str, id: &str, name: &str, desc: &str, pkg_mgr: &str, cmds: &[(&str, &str)]) -> SetupItem {
+    let installed = std::path::Path::new(path).exists();
+    let install_cmd = cmds
+        .iter()
+        .find(|(pm, _)| *pm == pkg_mgr)
+        .map(|(_, c)| c.to_string())
+        .unwrap_or_else(|| format!("# install {id} using your package manager"));
+    SetupItem {
+        id: id.to_string(),
+        name: name.to_string(),
+        description: desc.to_string(),
+        installed,
+        version: String::new(),
+        required: false,
+        install_cmd,
+    }
+}
+
 fn check_dir(path: &str, name: &str, desc: &str, cmd: &str) -> SetupItem {
     let exists = std::path::Path::new(path).exists();
     SetupItem {
@@ -248,6 +274,8 @@ fn get_status_inner(pkg_manager: &str) -> Vec<SetupItem> {
     vec![
         check_tool("xpra", "Xpra", "X Bridge", false, pkg_manager,
             &[("pacman", "sudo pacman -S xpra"), ("apt", "sudo apt install xpra"), ("dnf", "sudo dnf install xpra"), ("zypper", "sudo zypper install xpra")]),
+        check_path_exists("/usr/share/xpra/www/index.html", "xpra-html5", "Xpra HTML5", "Browser viewer for X Bridge", pkg_manager,
+            &[("pacman", "yay -S xpra-html5"), ("apt", "sudo apt install xpra-html5"), ("dnf", "sudo dnf install xpra-html5"), ("zypper", "sudo zypper install xpra-html5")]),
         check_tool("ffmpeg", "FFmpeg", "Video thumbnails", false, pkg_manager,
             &[("pacman", "sudo pacman -S ffmpeg"), ("apt", "sudo apt install ffmpeg"), ("dnf", "sudo dnf install ffmpeg"), ("zypper", "sudo zypper install ffmpeg")]),
         check_tool("fish", "Fish Shell", "Shell", false, pkg_manager,
