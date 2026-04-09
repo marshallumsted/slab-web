@@ -1,0 +1,174 @@
+/* ── slab design tokens ──
+   Pulled from portfolio design language.
+   Brutalist Metro. Sharp edges. Flat blocks. Bold type. */
+
+/* ── Fonts ── */
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+/* ── Variables ── */
+:root {
+  /* palette */
+  --black: #000;
+  --white: #fff;
+  --red: #e63227;
+  --gray-200: #e0e0e0;
+  --gray-300: #ccc;
+  --gray-500: #999;
+  --gray-600: #444;
+  --gray-700: #333;
+  --gray-800: #1a1a1a;
+  --gray-900: #111;
+
+  /* typography */
+  --font-sans: 'Instrument Sans', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+
+  /* spacing */
+  --gap: 3px;
+  --pad-sm: .5rem;
+  --pad-md: 1rem;
+  --pad-lg: 1.5rem;
+  --pad-xl: 2.5rem;
+
+  /* taskbar */
+  --taskbar-height: 40px;
+
+  /* tiles */
+  --tile-sm: 120px;
+  --tile-md: 180px;
+  --tile-lg: 240px;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #222 #000;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--black);
+  color: var(--white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* ── Dot grid background ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(255,255,255,.015) 1px, transparent 1px);
+  background-size: 24px 24px;
+  z-index: 0;
+}
+
+/* ── Label pattern ── */
+.slab-label {
+  font-family: var(--font-mono);
+  font-size: .65rem;
+  color: var(--red);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.slab-label::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  background: var(--red);
+  border-radius: 50%;
+}
+
+/* ── Mono text ── */
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* ── Tile base ── */
+.slab-tile {
+  background: var(--gray-700);
+  padding: var(--pad-lg);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.slab-tile:hover { background: var(--gray-600); }
+.slab-tile--red { background: var(--red); }
+.slab-tile--red:hover { background: #cc2b22; }
+.slab-tile--white { background: var(--gray-200); color: var(--black); }
+.slab-tile--white:hover { background: var(--white); }
+
+.slab-tile-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.slab-tile-value {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -.03em;
+}
+
+.slab-tile-subtitle {
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  color: var(--gray-500);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-top: .3rem;
+}
+
+/* ── Tag ── */
+.slab-tag {
+  font-family: var(--font-mono);
+  font-size: .65rem;
+  padding: .2rem .5rem;
+  background: rgba(255,255,255,.1);
+  color: rgba(255,255,255,.7);
+  display: inline-block;
+}
+
+/* ── Button ── */
+.slab-btn {
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  background: var(--red);
+  color: var(--white);
+  border: none;
+  padding: .6rem 1.2rem;
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.slab-btn:hover { background: #cc2b22; }
+
+/* ── Divider ── */
+.slab-divider {
+  height: 1px;
+  background: repeating-linear-gradient(90deg, var(--gray-800) 0, var(--gray-800) 4px, transparent 4px, transparent 12px);
+}
+
+/* ── Selection ── */
+::selection {
+  background: var(--red);
+  color: var(--white);
+}
