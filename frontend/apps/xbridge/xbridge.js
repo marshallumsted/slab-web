@@ -80,8 +80,9 @@
       const proxyBase = `/api/xbridge/proxy/${data.port}`;
       const wsPath = `api/xbridge/ws/${data.port}/`;
       const ssl = location.protocol === 'https:';
-      // xpra HTML5 client accepts connection params via hash/query
-      const connectUrl = `${proxyBase}/index.html#server=${location.hostname}&port=${location.port || (ssl ? '443' : '80')}&path=${wsPath}&ssl=${ssl}&encoding=auto&keyboard=true`;
+      const port = location.port || (ssl ? '443' : '80');
+      // xpra HTML5 client v19 accepts connection params as query params
+      const connectUrl = `${proxyBase}/index.html?server=${location.hostname}&port=${port}&path=${wsPath}&ssl=${ssl}&action=connect`;
       let attempts = 0;
       const poll = setInterval(async () => {
         attempts++;
