@@ -203,34 +203,14 @@ function buildStartScreen() {
           tile.title = app.comment;
         }
 
-        // left click: launch natively
+        // click: open in slab via X Bridge
         tile.addEventListener('click', () => {
-          fetch('/api/apps/launch', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ exec: app.exec }),
-          });
-          closeStart();
-        });
-
-        // right click: context menu with xbridge option
-        tile.addEventListener('contextmenu', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const items = [
-            { label: 'Launch', action: () => {
-              fetch('/api/apps/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ exec: app.exec }) });
-              closeStart();
-            }},
-          ];
           if (xbridgeAvailable) {
-            items.push({ label: 'Open in Slab', action: () => {
-              launchInXbridge(app.exec, app.name);
-              closeStart();
-            }});
+            launchInXbridge(app.exec, app.name);
+            closeStart();
+          } else {
+            showXbridgePrompt();
           }
-          // reuse the context menu from files
-          showGlobalContextMenu(e, items);
         });
 
         grid.appendChild(tile);
@@ -2832,6 +2812,35 @@ function applySettings() {
 }
 // apply on load
 applySettings();
+
+// ── X Bridge not installed prompt ──
+
+function showXbridgePrompt() {
+  closeStart();
+  const dlg = document.createElement('div');
+  dlg.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:var(--overlay-medium);';
+  dlg.innerHTML = `
+    <div class="files-dialog-box" style="width:340px;">
+      <div class="files-dialog-title">Xpra Required</div>
+      <div style="font-size:.7rem;color:var(--gray-300);line-height:1.6;margin-bottom:8px;">
+        System apps run inside slab via Xpra.<br>
+        Install it from Settings > Setup to enable this feature.
+      </div>
+      <div class="files-dialog-actions">
+        <button class="files-dialog-btn files-dialog-cancel">Close</button>
+        <button class="files-dialog-btn files-dialog-ok">Open Setup</button>
+      </div>
+    </div>
+  `;
+  dlg.querySelector('.files-dialog-cancel').addEventListener('click', () => dlg.remove());
+  dlg.querySelector('.files-dialog-ok').addEventListener('click', () => {
+    dlg.remove();
+    // open settings to setup tab
+    const content = buildSettingsContent();
+    createWindow('settings', 'Settings', content, 550, 500);
+  });
+  document.body.appendChild(dlg);
+}
 
 // ── Open terminal with pre-typed command ──
 
