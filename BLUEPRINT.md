@@ -198,15 +198,39 @@ Build in any order. Each is independent.
 
 ---
 
-## Phase 10 — Multi-User and Deployment
+## Phase 10 — Docker Awareness
 
-### 10a. Multi-User
+### 10a. Environment Detection
+- Backend detects Docker via `/.dockerenv` or cgroup markers
+- `GET /api/shell/environment` returns runtime, mount status, PID namespace, hostname
+- Frontend adapts UI based on environment
+
+### 10b. Docker Settings Tab
+- Shows mount status: home directory, `/proc`, `/sys`, PID namespace
+- Each missing mount shows the `docker run` flag to fix it (copy-to-clipboard)
+- Visual indicators: green (mounted), red (missing), yellow (read-only when read-write needed)
+
+### 10c. Setup Tab Docker Mode
+- Detect when install commands won't work (inside container)
+- Show what needs host-side setup vs what's in the image
+- Explain which dependencies need to be baked into the Dockerfile
+- Replace broken install buttons with host-side instructions
+
+### 10d. Recommended Docker Run
+- Generate the full recommended `docker run` command based on current missing mounts
+- One-click copy of the complete command
+
+---
+
+## Phase 11 — Multi-User and Deployment
+
+### 11a. Multi-User
 - Login screen
 - Per-user config and data directories
 - System settings require sudo (PAM verification)
 - User management: create, delete, passwords, sudo, profile pictures
 
-### 10b. Docker Deployment
-- Official Docker image
-- Volume mounts for config and data
-- Single-command deployment
+### 11b. Docker Image
+- Official Docker image with all dependencies baked in
+- Volume mounts for config, data, and host filesystem
+- Single-command deployment with sensible defaults

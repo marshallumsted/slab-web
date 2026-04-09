@@ -279,9 +279,36 @@ The desktop renders consistent toggles, dropdowns, and labels — same look ever
 - Theme (dark/light)
 - Performance (animations, dot grid, blur)
 - Setup (dependencies, install)
+- Docker (if detected — see below)
 - Network, About
 
 Per-app settings sections are gone — the menu bar handles them contextually.
+
+### Docker Deployment Awareness
+
+slab auto-detects whether it's running inside Docker (check for `/.dockerenv` or cgroup markers). When running in Docker, the settings app shows a **Docker** tab that:
+
+**Shows mount status:**
+- `/home` — is the host home directory mounted? Read-only or read-write?
+- `/proc` — is host `/proc` available? (needed for system monitor)
+- `/sys` — is host `/sys` available? (needed for hardware info)
+- Host PID namespace — is `--pid=host` set?
+
+**Provides fix commands:** For each missing mount, show the `docker run` flag needed to fix it. One-click copy. These commands run on the host, not inside the container.
+
+**Adjusts the setup tab:** When running in Docker, the dependency install commands won't work (can't `apt install` inside the container for host features). The setup tab shows what's available inside the container vs what needs host-side setup. Dependencies like ffmpeg and xpra need to be baked into the Docker image or mounted from the host — the setup tab explains this instead of showing broken install buttons.
+
+**Backend detection:** The Rust backend exposes Docker status via `GET /api/shell/environment`:
+```json
+{
+  "runtime": "docker",
+  "mounts": { "home": true, "proc": "host", "sys": false },
+  "pid_namespace": "host",
+  "hostname": "glados"
+}
+```
+
+This lets the frontend adapt — hide install buttons that won't work, show mount status, offer the right fix commands for the user's deployment.
 
 ### Multi-User (Planned)
 
