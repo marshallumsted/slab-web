@@ -203,6 +203,7 @@ function buildStartScreen() {
           tile.title = app.comment;
         }
 
+        // left click: launch natively
         tile.addEventListener('click', () => {
           fetch('/api/apps/launch', {
             method: 'POST',
@@ -210,6 +211,26 @@ function buildStartScreen() {
             body: JSON.stringify({ exec: app.exec }),
           });
           closeStart();
+        });
+
+        // right click: context menu with xbridge option
+        tile.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const items = [
+            { label: 'Launch', action: () => {
+              fetch('/api/apps/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ exec: app.exec }) });
+              closeStart();
+            }},
+          ];
+          if (xbridgeAvailable) {
+            items.push({ label: 'Open in Slab', action: () => {
+              launchInXbridge(app.exec, app.name);
+              closeStart();
+            }});
+          }
+          // reuse the context menu from files
+          showGlobalContextMenu(e, items);
         });
 
         grid.appendChild(tile);
@@ -2682,6 +2703,92 @@ function applySettings() {
 }
 // apply on load
 applySettings();
+
+// ── X Bridge ──
+
+let xbridgeAvailable = false;
+
+fetch('/api/xbridge/status').then(r => r.json()).then(data => {
+  xbridgeAvailable = data.available;
+}).catch(() => {});
+
+async function launchInXbridge(exec, name) {
+  try {
+    const res = await fetch('/api/xbridge/launch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ exec, name }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+
+    // give xpra a moment to start
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'xbridge-app';
+      el.innerHTML = `
+        <div class="xbridge-loading">Connecting to ${name}...</div>
+        <iframe class="xbridge-frame" src="http://${location.hostname}:${data.port}/"></iframe>
+      `;
+
+      const iframe = el.querySelector('iframe');
+      iframe.onload = () => {
+        el.querySelector('.xbridge-loading')?.remove();
+      };
+
+      const win = createWindow('xbridge', name, el, 800, 600);
+
+      // cleanup on window close — stop the xpra session
+      const observer = new MutationObserver(() => {
+        if (!document.contains(win)) {
+          fetch('/api/xbridge/stop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: data.id }),
+          });
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }, 2000);
+  } catch {}
+}
+
+// ── Global context menu helper (reusable outside files app) ──
+
+function showGlobalContextMenu(e, items) {
+  e.preventDefault();
+  // remove existing
+  document.querySelectorAll('.ctx-menu').forEach(m => m.remove());
+
+  const menu = document.createElement('div');
+  menu.className = 'ctx-menu';
+
+  for (const item of items) {
+    if (item === 'sep') {
+      const sep = document.createElement('div');
+      sep.className = 'ctx-sep';
+      menu.appendChild(sep);
+      continue;
+    }
+    const row = document.createElement('div');
+    row.className = 'ctx-item';
+    row.textContent = item.label;
+    row.addEventListener('click', () => { menu.remove(); item.action(); });
+    menu.appendChild(row);
+  }
+
+  document.body.appendChild(menu);
+  let x = e.clientX, y = e.clientY;
+  const rect = menu.getBoundingClientRect();
+  if (x + rect.width > window.innerWidth) x = window.innerWidth - rect.width - 4;
+  if (y + rect.height > window.innerHeight) y = window.innerHeight - rect.height - 4;
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+
+  const close = () => menu.remove();
+  setTimeout(() => document.addEventListener('click', close, { once: true }), 10);
+}
 
 // ── Suppress system right-click across entire UI ──
 

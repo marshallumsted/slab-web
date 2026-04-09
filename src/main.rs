@@ -8,6 +8,7 @@ mod files;
 mod media;
 mod sysmon;
 mod terminal;
+mod xbridge;
 
 #[tokio::main]
 async fn main() {
@@ -38,7 +39,10 @@ async fn main() {
         .route("/api/terminal", get(terminal::ws_handler))
         .route("/api/apps", get(apps::list_apps))
         .route("/api/apps/launch", post(apps::launch_app))
-        .route("/api/apps/icon", get(apps::serve_icon));
+        .route("/api/apps/icon", get(apps::serve_icon))
+        .route("/api/xbridge/status", get(xbridge::status))
+        .route("/api/xbridge/launch", post(xbridge::launch))
+        .route("/api/xbridge/stop", post(xbridge::stop));
 
     let app = api.fallback_service(ServeDir::new("frontend"));
 
