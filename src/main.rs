@@ -13,6 +13,7 @@ async fn main() {
 
     let api = Router::new()
         .route("/api/files", get(files::list_dir))
+        .route("/api/raw", get(files::serve_raw))
         .route("/api/user", get(get_user));
 
     let app = api.fallback_service(ServeDir::new("frontend"));

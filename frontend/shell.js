@@ -549,14 +549,22 @@ function buildFilesContent() {
     listEl.className = viewMode === 'grid' ? 'files-list files-list--grid' : 'files-list';
 
     for (const entry of entries) {
+      const isImage = !entry.is_dir && isImageFile(entry.name);
+      const imgUrl = isImage ? `/api/raw?path=${encodeURIComponent(currentPath + '/' + entry.name)}` : null;
+
       if (viewMode === 'grid') {
         const card = document.createElement('div');
         card.className = 'files-card';
         if (entry.is_dir) card.classList.add('files-card--dir');
+        if (isImage) card.classList.add('files-card--preview');
+
+        if (isImage) {
+          card.style.backgroundImage = `url(${imgUrl})`;
+        }
 
         const icon = document.createElement('div');
         icon.className = 'files-card-icon';
-        icon.textContent = entry.is_dir ? '/' : getFileIcon(entry.name);
+        icon.textContent = entry.is_dir ? '/' : (isImage ? '' : getFileIcon(entry.name));
 
         const name = document.createElement('div');
         name.className = 'files-card-name';
@@ -574,6 +582,11 @@ function buildFilesContent() {
         const row = document.createElement('div');
         row.className = 'files-row';
         if (entry.is_dir) row.classList.add('files-row--dir');
+        if (isImage) row.classList.add('files-row--preview');
+
+        if (isImage) {
+          row.style.backgroundImage = `url(${imgUrl})`;
+        }
 
         const name = document.createElement('span');
         name.className = 'files-col-name';
@@ -615,6 +628,12 @@ fetch('/api/user').then(r => r.json()).then(data => {
   USER = data.user;
   HOME = data.home;
 }).catch(() => {});
+
+const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif']);
+function isImageFile(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  return IMAGE_EXTS.has(ext);
+}
 
 function getFileIcon(name) {
   const ext = name.split('.').pop().toLowerCase();

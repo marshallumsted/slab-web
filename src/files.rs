@@ -1,4 +1,8 @@
-use axum::{extract::Query, response::Json};
+use axum::{
+    extract::Query,
+    http::{HeaderMap, StatusCode, header},
+    response::{IntoResponse, Json},
+};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -66,4 +70,40 @@ pub async fn list_dir(Query(params): Query<ListParams>) -> Json<DirListing> {
         parent,
         entries,
     })
+}
+
+#[derive(Deserialize)]
+pub struct RawParams {
+    path: String,
+}
+
+pub async fn serve_raw(Query(params): Query<RawParams>) -> impl IntoResponse {
+    let path = PathBuf::from(&params.path);
+    let path = match path.canonicalize() {
+        Ok(p) => p,
+        Err(_) => return (StatusCode::NOT_FOUND, HeaderMap::new(), Vec::new()),
+    };
+
+    let bytes = match std::fs::read(&path) {
+        Ok(b) => b,
+        Err(_) => return (StatusCode::NOT_FOUND, HeaderMap::new(), Vec::new()),
+    };
+
+    let mime = match path.extension().and_then(|e| e.to_str()) {
+        Some("png") => "image/png",
+        Some("jpg" | "jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        Some("svg") => "image/svg+xml",
+        Some("bmp") => "image/bmp",
+        Some("ico") => "image/x-icon",
+        Some("avif") => "image/avif",
+        _ => "application/octet-stream",
+    };
+
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, mime.parse().unwrap());
+    headers.insert(header::CACHE_CONTROL, "public, max-age=60".parse().unwrap());
+
+    (StatusCode::OK, headers, bytes)
 }

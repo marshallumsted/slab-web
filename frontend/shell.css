@@ -555,6 +555,63 @@
   overflow: hidden;
 }
 
+/* Image previews — grid */
+.files-card--preview {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.files-card--preview::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .55);
+  transition: background .15s;
+}
+
+.files-card--preview:hover::after {
+  background: rgba(0, 0, 0, .35);
+}
+
+.files-card--preview .files-card-icon,
+.files-card--preview .files-card-name {
+  position: relative;
+  z-index: 1;
+  color: var(--white);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
+}
+
+/* Image previews — list */
+.files-row--preview {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.files-row--preview::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .6);
+  transition: background .15s;
+}
+
+.files-row--preview:hover::after {
+  background: rgba(0, 0, 0, .45);
+}
+
+.files-row--preview .files-col-name,
+.files-row--preview .files-col-size,
+.files-row--preview .files-col-mod {
+  position: relative;
+  z-index: 1;
+  color: var(--white);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
+}
+
 .files-error {
   color: var(--red);
   padding: 1rem 8px;
