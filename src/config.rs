@@ -24,6 +24,7 @@ pub struct NetworkPlace {
     pub port: Option<u16>,
     pub path: String,
     pub username: Option<String>,
+    pub password: Option<String>,
     pub pinned: bool,
 }
 

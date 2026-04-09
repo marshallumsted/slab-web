@@ -1,4 +1,4 @@
-use axum::{Router, response::Json, routing::get};
+use axum::{Router, response::Json, routing::{get, post}};
 use serde_json::json;
 use tower_http::services::ServeDir;
 
@@ -15,6 +15,13 @@ async fn main() {
     let api = Router::new()
         .route("/api/files", get(files::list_dir))
         .route("/api/raw", get(files::serve_raw))
+        .route("/api/download", get(files::download))
+        .route("/api/files/rename", post(files::rename))
+        .route("/api/files/copy", post(files::copy))
+        .route("/api/files/move", post(files::move_files))
+        .route("/api/files/delete", post(files::delete))
+        .route("/api/files/mkdir", post(files::mkdir))
+        .route("/api/files/touch", post(files::touch))
         .route("/api/user", get(get_user))
         .route("/api/config", get(config::get_config).post(config::set_config));
 

@@ -107,3 +107,143 @@ pub async fn serve_raw(Query(params): Query<RawParams>) -> impl IntoResponse {
 
     (StatusCode::OK, headers, bytes)
 }
+
+// file download with Content-Disposition
+pub async fn download(Query(params): Query<RawParams>) -> impl IntoResponse {
+    let path = PathBuf::from(&params.path);
+    let path = match path.canonicalize() {
+        Ok(p) => p,
+        Err(_) => return (StatusCode::NOT_FOUND, HeaderMap::new(), Vec::new()),
+    };
+
+    let filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+
+    let bytes = match std::fs::read(&path) {
+        Ok(b) => b,
+        Err(_) => return (StatusCode::NOT_FOUND, HeaderMap::new(), Vec::new()),
+    };
+
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, "application/octet-stream".parse().unwrap());
+    headers.insert(
+        header::CONTENT_DISPOSITION,
+        format!("attachment; filename=\"{filename}\"").parse().unwrap(),
+    );
+
+    (StatusCode::OK, headers, bytes)
+}
+
+// ── File operations ──
+
+#[derive(Deserialize)]
+pub struct RenameBody {
+    pub path: String,
+    pub new_name: String,
+}
+
+pub async fn rename(Json(body): Json<RenameBody>) -> StatusCode {
+    let src = PathBuf::from(&body.path);
+    let dest = match src.parent() {
+        Some(p) => p.join(&body.new_name),
+        None => return StatusCode::BAD_REQUEST,
+    };
+    match std::fs::rename(&src, &dest) {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+#[derive(Deserialize)]
+pub struct CopyMoveBody {
+    pub src: Vec<String>,
+    pub dest: String,
+}
+
+pub async fn copy(Json(body): Json<CopyMoveBody>) -> StatusCode {
+    let dest_dir = PathBuf::from(&body.dest);
+    for src_path in &body.src {
+        let src = PathBuf::from(src_path);
+        let name = match src.file_name() {
+            Some(n) => n,
+            None => continue,
+        };
+        let target = dest_dir.join(name);
+        if src.is_dir() {
+            if copy_dir_recursive(&src, &target).is_err() {
+                return StatusCode::INTERNAL_SERVER_ERROR;
+            }
+        } else if std::fs::copy(&src, &target).is_err() {
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        }
+    }
+    StatusCode::OK
+}
+
+fn copy_dir_recursive(src: &std::path::Path, dest: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dest)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let target = dest.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_dir_recursive(&entry.path(), &target)?;
+        } else {
+            std::fs::copy(entry.path(), target)?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn move_files(Json(body): Json<CopyMoveBody>) -> StatusCode {
+    let dest_dir = PathBuf::from(&body.dest);
+    for src_path in &body.src {
+        let src = PathBuf::from(src_path);
+        let name = match src.file_name() {
+            Some(n) => n,
+            None => continue,
+        };
+        let target = dest_dir.join(name);
+        if std::fs::rename(&src, &target).is_err() {
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        }
+    }
+    StatusCode::OK
+}
+
+#[derive(Deserialize)]
+pub struct DeleteBody {
+    pub paths: Vec<String>,
+}
+
+pub async fn delete(Json(body): Json<DeleteBody>) -> StatusCode {
+    for p in &body.paths {
+        let path = PathBuf::from(p);
+        let res = if path.is_dir() {
+            std::fs::remove_dir_all(&path)
+        } else {
+            std::fs::remove_file(&path)
+        };
+        if res.is_err() {
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        }
+    }
+    StatusCode::OK
+}
+
+#[derive(Deserialize)]
+pub struct CreateBody {
+    pub path: String,
+}
+
+pub async fn mkdir(Json(body): Json<CreateBody>) -> StatusCode {
+    match std::fs::create_dir_all(&body.path) {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+pub async fn touch(Json(body): Json<CreateBody>) -> StatusCode {
+    match std::fs::File::create(&body.path) {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}

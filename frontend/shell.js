@@ -459,6 +459,8 @@ function buildFilesContent() {
         <input class="files-dialog-input" id="fs-net-path" type="text" spellcheck="false" placeholder="/share" />
         <label class="files-dialog-label">Username (optional)</label>
         <input class="files-dialog-input" id="fs-net-user" type="text" spellcheck="false" placeholder="" />
+        <label class="files-dialog-label">Password (optional)</label>
+        <input class="files-dialog-input" id="fs-net-pass" type="password" spellcheck="false" placeholder="" />
         <div class="files-dialog-row">
           <input type="checkbox" id="fs-net-pin" checked />
           <label for="fs-net-pin" class="files-dialog-label" style="margin:0;">Pin to sidebar</label>
@@ -554,7 +556,7 @@ function buildFilesContent() {
     networkEl.innerHTML = '';
     const netHeader = document.createElement('div');
     netHeader.className = 'files-sidebar-header';
-    netHeader.innerHTML = '<span class="files-sidebar-label">Network</span><button class="files-sidebar-add" title="Add network place">+</button>';
+    netHeader.innerHTML = '<span class="files-sidebar-label">Network</span><button class="files-sidebar-add files-sidebar-add--net" title="Add network place">+</button>';
     netHeader.querySelector('.files-sidebar-add').addEventListener('click', openAddNetwork);
     networkEl.appendChild(netHeader);
 
@@ -639,11 +641,12 @@ function buildFilesContent() {
     const path = el.querySelector('#fs-net-path').value.trim() || '/';
     const port = parseInt(el.querySelector('#fs-net-port').value) || null;
     const username = el.querySelector('#fs-net-user').value.trim() || null;
+    const password = el.querySelector('#fs-net-pass').value || null;
     const pinned = el.querySelector('#fs-net-pin').checked;
     if (name && host) {
       slabConfig.network.push({
         id: Date.now().toString(36),
-        name, protocol: proto, host, port, path, username, pinned,
+        name, protocol: proto, host, port, path, username, password, pinned,
       });
       saveConfig();
       renderSidebar();
@@ -657,6 +660,7 @@ function buildFilesContent() {
     el.querySelector('#fs-net-port').value = '';
     el.querySelector('#fs-net-path').value = '/';
     el.querySelector('#fs-net-user').value = '';
+    el.querySelector('#fs-net-pass').value = '';
     el.querySelector('#fs-net-pin').checked = true;
     addNetDlg.classList.remove('hidden');
     el.querySelector('#fs-net-name').focus();
@@ -877,6 +881,7 @@ function buildFilesContent() {
 
         card.addEventListener('click', (e) => handleClick(e, idx, entry));
         card.addEventListener('dblclick', (e) => handleDblClick(e, idx, entry));
+        card.addEventListener('contextmenu', (e) => handleContextMenu(e, idx, entry));
 
         allItems.push({ el: card, entry });
         listEl.appendChild(card);
@@ -912,6 +917,7 @@ function buildFilesContent() {
 
         row.addEventListener('click', (e) => handleClick(e, idx, entry));
         row.addEventListener('dblclick', (e) => handleDblClick(e, idx, entry));
+        row.addEventListener('contextmenu', (e) => handleContextMenu(e, idx, entry));
 
         allItems.push({ el: row, entry });
         listEl.appendChild(row);
@@ -923,6 +929,203 @@ function buildFilesContent() {
   listEl.addEventListener('click', (e) => {
     if (e.target === listEl) clearSelection();
   });
+
+  // ── Clipboard ──
+  let clipboard = { mode: null, paths: [] }; // mode: 'copy' | 'cut'
+
+  // ── Context Menu ──
+  let ctxMenu = null;
+
+  function showContextMenu(e, items) {
+    e.preventDefault();
+    e.stopPropagation();
+    closeContextMenu();
+
+    ctxMenu = document.createElement('div');
+    ctxMenu.className = 'ctx-menu';
+
+    for (const item of items) {
+      if (item === 'sep') {
+        const sep = document.createElement('div');
+        sep.className = 'ctx-sep';
+        ctxMenu.appendChild(sep);
+        continue;
+      }
+      const row = document.createElement('div');
+      row.className = 'ctx-item';
+      if (item.disabled) row.classList.add('ctx-disabled');
+      row.textContent = item.label;
+      if (!item.disabled) {
+        row.addEventListener('click', () => {
+          closeContextMenu();
+          item.action();
+        });
+      }
+      ctxMenu.appendChild(row);
+    }
+
+    // position at cursor, keep in viewport
+    document.body.appendChild(ctxMenu);
+    let x = e.clientX, y = e.clientY;
+    const rect = ctxMenu.getBoundingClientRect();
+    if (x + rect.width > window.innerWidth) x = window.innerWidth - rect.width - 4;
+    if (y + rect.height > window.innerHeight) y = window.innerHeight - rect.height - 4;
+    ctxMenu.style.left = x + 'px';
+    ctxMenu.style.top = y + 'px';
+  }
+
+  function closeContextMenu() {
+    if (ctxMenu) { ctxMenu.remove(); ctxMenu = null; }
+  }
+
+  document.addEventListener('click', closeContextMenu);
+  document.addEventListener('contextmenu', (e) => {
+    // close existing menu on any right-click outside
+    if (ctxMenu && !ctxMenu.contains(e.target)) closeContextMenu();
+  });
+
+  function getSelectedPaths() {
+    return [...selected].map(i => currentPath + '/' + allItems[i].entry.name);
+  }
+
+  // right-click on a file/folder
+  function handleContextMenu(e, idx, entry) {
+    // if right-clicked item is not in selection, select only it
+    if (!selected.has(idx)) {
+      clearSelection();
+      setSelected(idx, true);
+      lastClickedIdx = idx;
+    }
+
+    const paths = getSelectedPaths();
+    const multi = paths.length > 1;
+    const isDir = entry.is_dir;
+    const fullPath = currentPath + '/' + entry.name;
+
+    const items = [];
+
+    if (!multi && isDir) {
+      items.push({ label: 'Open', action: () => navigate(fullPath) });
+      items.push('sep');
+    }
+
+    if (!multi) {
+      items.push({ label: 'Rename', action: () => doRename(fullPath, entry.name) });
+    }
+
+    items.push({ label: 'Copy', action: () => { clipboard = { mode: 'copy', paths }; } });
+    items.push({ label: 'Cut', action: () => { clipboard = { mode: 'cut', paths }; } });
+    items.push({ label: 'Paste', disabled: !clipboard.paths.length, action: () => doPaste() });
+
+    items.push('sep');
+
+    if (!multi && !isDir) {
+      items.push({ label: 'Download', action: () => doDownload(fullPath) });
+    }
+
+    items.push({ label: 'Copy Path', action: () => { navigator.clipboard.writeText(multi ? paths.join('\n') : fullPath); } });
+
+    if (!multi && isDir) {
+      items.push({ label: 'Add to Places', action: () => {
+        slabConfig.places.push({ name: entry.name, path: fullPath, builtin: false });
+        saveConfig();
+        renderSidebar();
+      }});
+    }
+
+    items.push('sep');
+    items.push({ label: multi ? `Delete (${paths.length})` : 'Delete', action: () => doDelete(paths) });
+
+    showContextMenu(e, items);
+  }
+
+  // right-click on empty space
+  function handleBgContextMenu(e) {
+    if (e.target !== listEl) return;
+    const items = [
+      { label: 'New Folder', action: () => doNewFolder() },
+      { label: 'New File', action: () => doNewFile() },
+      'sep',
+      { label: 'Paste', disabled: !clipboard.paths.length, action: () => doPaste() },
+      'sep',
+      { label: 'Refresh', action: () => navigate(currentPath) },
+      { label: 'Select All', action: () => {
+        allItems.forEach((_, i) => setSelected(i, true));
+      }},
+    ];
+    showContextMenu(e, items);
+  }
+
+  listEl.addEventListener('contextmenu', handleBgContextMenu);
+
+  // ── File Actions ──
+
+  async function doRename(fullPath, oldName) {
+    const newName = prompt('Rename to:', oldName);
+    if (!newName || newName === oldName) return;
+    const res = await fetch('/api/files/rename', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: fullPath, new_name: newName }),
+    });
+    if (res.ok) navigate(currentPath);
+  }
+
+  async function doPaste() {
+    if (!clipboard.paths.length) return;
+    const endpoint = clipboard.mode === 'cut' ? '/api/files/move' : '/api/files/copy';
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ src: clipboard.paths, dest: currentPath }),
+    });
+    if (res.ok) {
+      if (clipboard.mode === 'cut') clipboard = { mode: null, paths: [] };
+      navigate(currentPath);
+    }
+  }
+
+  async function doDelete(paths) {
+    const count = paths.length;
+    if (!confirm(`Delete ${count} item${count > 1 ? 's' : ''}?`)) return;
+    const res = await fetch('/api/files/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths }),
+    });
+    if (res.ok) navigate(currentPath);
+  }
+
+  function doDownload(fullPath) {
+    const a = document.createElement('a');
+    a.href = `/api/download?path=${encodeURIComponent(fullPath)}`;
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  async function doNewFolder() {
+    const name = prompt('Folder name:');
+    if (!name) return;
+    const res = await fetch('/api/files/mkdir', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: currentPath + '/' + name }),
+    });
+    if (res.ok) navigate(currentPath);
+  }
+
+  async function doNewFile() {
+    const name = prompt('File name:');
+    if (!name) return;
+    const res = await fetch('/api/files/touch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: currentPath + '/' + name }),
+    });
+    if (res.ok) navigate(currentPath);
+  }
 
   backBtn.addEventListener('click', () => {
     if (parentPath) navigate(parentPath);
