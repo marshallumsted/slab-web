@@ -179,3 +179,85 @@ fn check_dir(path: &str, name: &str, desc: &str, cmd: &str) -> SetupItem {
         install_cmd: cmd.to_string(),
     }
 }
+
+// build a single command that installs all missing packages
+#[derive(Serialize)]
+pub struct InstallAllResult {
+    pub command: String,
+    pub packages: Vec<String>,
+    pub pkg_manager: String,
+}
+
+pub async fn install_all_cmd() -> Json<InstallAllResult> {
+    let (_, pkg_manager) = detect_distro();
+    let status = get_status_inner(&pkg_manager);
+
+    let mut packages = Vec::new();
+    let mut non_pkg_cmds = Vec::new();
+
+    for item in &status {
+        if item.installed || item.install_cmd.starts_with('#') {
+            continue;
+        }
+        // extract package name from install command
+        // e.g. "sudo pacman -S xpra" → "xpra"
+        // e.g. "sudo apt install docker.io" → "docker.io"
+        // e.g. "sudo mkdir -p /etc/slab" → not a package
+        if item.install_cmd.contains("pacman -S ")
+            || item.install_cmd.contains("apt install ")
+            || item.install_cmd.contains("dnf install ")
+            || item.install_cmd.contains("zypper install ")
+        {
+            if let Some(pkg) = item.install_cmd.split_whitespace().last() {
+                packages.push(pkg.to_string());
+            }
+        } else {
+            non_pkg_cmds.push(item.install_cmd.clone());
+        }
+    }
+
+    let mut command = String::new();
+
+    if !packages.is_empty() {
+        let install_prefix = match pkg_manager.as_str() {
+            "pacman" => "sudo pacman -S --noconfirm",
+            "apt" => "sudo apt install -y",
+            "dnf" => "sudo dnf install -y",
+            "zypper" => "sudo zypper install -y",
+            _ => "# install",
+        };
+        command = format!("{} {}", install_prefix, packages.join(" "));
+    }
+
+    // append non-package commands
+    for cmd in &non_pkg_cmds {
+        if !command.is_empty() {
+            command.push_str(" && ");
+        }
+        command.push_str(cmd);
+    }
+
+    Json(InstallAllResult {
+        command,
+        packages,
+        pkg_manager,
+    })
+}
+
+fn get_status_inner(pkg_manager: &str) -> Vec<SetupItem> {
+    vec![
+        check_tool("xpra", "Xpra", "X Bridge", false, pkg_manager,
+            &[("pacman", "sudo pacman -S xpra"), ("apt", "sudo apt install xpra"), ("dnf", "sudo dnf install xpra"), ("zypper", "sudo zypper install xpra")]),
+        check_tool("ffmpeg", "FFmpeg", "Video thumbnails", false, pkg_manager,
+            &[("pacman", "sudo pacman -S ffmpeg"), ("apt", "sudo apt install ffmpeg"), ("dnf", "sudo dnf install ffmpeg"), ("zypper", "sudo zypper install ffmpeg")]),
+        check_tool("fish", "Fish Shell", "Shell", false, pkg_manager,
+            &[("pacman", "sudo pacman -S fish"), ("apt", "sudo apt install fish"), ("dnf", "sudo dnf install fish"), ("zypper", "sudo zypper install fish")]),
+        check_tool("btop", "btop", "Monitor", false, pkg_manager,
+            &[("pacman", "sudo pacman -S btop"), ("apt", "sudo apt install btop"), ("dnf", "sudo dnf install btop"), ("zypper", "sudo zypper install btop")]),
+        check_tool("docker", "Docker", "Containers", false, pkg_manager,
+            &[("pacman", "sudo pacman -S docker"), ("apt", "sudo apt install docker.io"), ("dnf", "sudo dnf install docker"), ("zypper", "sudo zypper install docker")]),
+        check_tool("podman", "Podman", "Containers", false, pkg_manager,
+            &[("pacman", "sudo pacman -S podman"), ("apt", "sudo apt install podman"), ("dnf", "sudo dnf install podman"), ("zypper", "sudo zypper install podman")]),
+        check_dir("/etc/slab", "System Config", "/etc/slab", "sudo mkdir -p /etc/slab"),
+    ]
+}

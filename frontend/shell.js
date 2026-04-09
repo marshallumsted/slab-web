@@ -2348,13 +2348,29 @@ function buildSettingsContent() {
   }
 
   function renderSetupData(data) {
+    const installed = data.items.filter(i => i.installed);
+    const missing = data.items.filter(i => !i.installed);
+    const installable = missing.filter(i => !i.install_cmd.startsWith('#'));
+
     let html = `
       <div class="settings-page-title">Setup</div>
       <div class="settings-page-desc">${data.distro} &mdash; ${data.pkg_manager}</div>
     `;
 
-    const installed = data.items.filter(i => i.installed);
-    const missing = data.items.filter(i => !i.installed);
+    if (missing.length === 0) {
+      html += '<div class="setup-all-good">All dependencies installed</div>';
+    }
+
+    if (installable.length > 1) {
+      html += `
+        <div class="setup-install-all">
+          <div class="setup-install-all-info">
+            <span class="setup-install-all-label">${installable.length} packages available to install</span>
+          </div>
+          <button class="setup-install-all-btn" id="setup-install-all">Install All Missing</button>
+        </div>
+      `;
+    }
 
     if (missing.length > 0) {
       html += '<div class="settings-section"><div class="sysmon-section-title" style="color:var(--red);">Missing</div>';
@@ -2373,6 +2389,20 @@ function buildSettingsContent() {
     }
 
     main.innerHTML = html;
+
+    // install all button
+    const installAllBtn = main.querySelector('#setup-install-all');
+    if (installAllBtn) {
+      installAllBtn.addEventListener('click', async () => {
+        try {
+          const res = await fetch('/api/setup/install-all');
+          const result = await res.json();
+          if (result.command) {
+            openTerminalWithCommand(result.command + '\n');
+          }
+        } catch {}
+      });
+    }
 
     // attach button handlers
     main.querySelectorAll('.setup-install-btn').forEach(btn => {

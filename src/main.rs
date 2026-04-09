@@ -42,6 +42,7 @@ async fn main() {
         .route("/api/apps/launch", post(apps::launch_app))
         .route("/api/apps/icon", get(apps::serve_icon))
         .route("/api/setup", get(setup::get_status))
+        .route("/api/setup/install-all", get(setup::install_all_cmd))
         .route("/api/xbridge/status", get(xbridge::status))
         .route("/api/xbridge/launch", post(xbridge::launch))
         .route("/api/xbridge/stop", post(xbridge::stop));

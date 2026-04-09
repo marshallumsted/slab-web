@@ -2099,6 +2099,48 @@ body.theme-light .window-body:has(.term-app) {
   border-left-color: var(--white);
 }
 
+/* Install all bar */
+.setup-install-all {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--gray-800);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.setup-install-all-label {
+  font-size: .65rem;
+  color: var(--gray-300);
+}
+
+.setup-install-all-btn {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.setup-install-all-btn:hover {
+  background: var(--red-hover);
+}
+
+.setup-all-good {
+  font-family: var(--font-mono);
+  font-size: .65rem;
+  color: #4caf50;
+  font-weight: 700;
+  padding: 8px 0;
+  margin-bottom: 8px;
+}
+
 /* Setup items */
 .setup-item {
   padding: 10px 0;
