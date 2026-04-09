@@ -843,8 +843,9 @@ function buildFilesContent() {
     allItems = [];
 
     entries.forEach((entry, idx) => {
-      const isImage = !entry.is_dir && isImageFile(entry.name);
-      const imgUrl = isImage ? `/api/raw?path=${encodeURIComponent(currentPath + '/' + entry.name)}` : null;
+      const isImage = !entry.is_dir && hasPreview(entry.name);
+      const fullEntryPath = currentPath + '/' + entry.name;
+      const imgUrl = isImage ? previewUrl(fullEntryPath, entry.name) : null;
 
       if (viewMode === 'grid') {
         const card = document.createElement('div');
@@ -870,6 +871,13 @@ function buildFilesContent() {
 
         card.appendChild(icon);
         card.appendChild(name);
+
+        if (!entry.is_dir && isVideoFile(entry.name)) {
+          const badge = document.createElement('div');
+          badge.className = 'files-card-video-badge';
+          badge.textContent = '\u25B6';
+          card.appendChild(badge);
+        }
 
         card.addEventListener('click', (e) => handleClick(e, idx, entry));
         card.addEventListener('dblclick', (e) => handleDblClick(e, idx, entry));
@@ -1052,15 +1060,52 @@ function buildFilesContent() {
 
   // ── File Actions ──
 
-  async function doRename(fullPath, oldName) {
-    const newName = prompt('Rename to:', oldName);
-    if (!newName || newName === oldName) return;
-    const res = await fetch('/api/files/rename', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: fullPath, new_name: newName }),
+  function doRename(fullPath, oldName) {
+    // create inline rename dialog
+    closeContextMenu();
+    const dlg = document.createElement('div');
+    dlg.className = 'files-dialog';
+    dlg.innerHTML = `
+      <div class="files-dialog-box" style="width:280px;">
+        <div class="files-dialog-title">Rename</div>
+        <input class="files-dialog-input" type="text" spellcheck="false" value="" />
+        <div class="files-dialog-actions">
+          <button class="files-dialog-btn files-dialog-cancel">Cancel</button>
+          <button class="files-dialog-btn files-dialog-ok">Rename</button>
+        </div>
+      </div>
+    `;
+    const input = dlg.querySelector('input');
+    input.value = oldName;
+
+    // select filename without extension
+    const dotIdx = oldName.lastIndexOf('.');
+    const selectEnd = dotIdx > 0 ? dotIdx : oldName.length;
+
+    const doIt = async () => {
+      const newName = input.value.trim();
+      if (newName && newName !== oldName) {
+        const res = await fetch('/api/files/rename', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: fullPath, new_name: newName }),
+        });
+        if (res.ok) navigate(currentPath);
+      }
+      dlg.remove();
+    };
+
+    dlg.querySelector('.files-dialog-cancel').addEventListener('click', () => dlg.remove());
+    dlg.querySelector('.files-dialog-ok').addEventListener('click', doIt);
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') doIt();
+      if (e.key === 'Escape') dlg.remove();
     });
-    if (res.ok) navigate(currentPath);
+
+    el.appendChild(dlg);
+    input.focus();
+    input.setSelectionRange(0, selectEnd);
   }
 
   async function doPaste() {
@@ -1077,15 +1122,31 @@ function buildFilesContent() {
     }
   }
 
-  async function doDelete(paths) {
+  function doDelete(paths) {
     const count = paths.length;
-    if (!confirm(`Delete ${count} item${count > 1 ? 's' : ''}?`)) return;
-    const res = await fetch('/api/files/delete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paths }),
+    const dlg = document.createElement('div');
+    dlg.className = 'files-dialog';
+    dlg.innerHTML = `
+      <div class="files-dialog-box" style="width:280px;">
+        <div class="files-dialog-title">Delete</div>
+        <div style="font-size:.75rem;color:var(--gray-300);line-height:1.5;">Delete ${count} item${count > 1 ? 's' : ''}? This cannot be undone.</div>
+        <div class="files-dialog-actions">
+          <button class="files-dialog-btn files-dialog-cancel">Cancel</button>
+          <button class="files-dialog-btn files-dialog-ok">Delete</button>
+        </div>
+      </div>
+    `;
+    dlg.querySelector('.files-dialog-cancel').addEventListener('click', () => dlg.remove());
+    dlg.querySelector('.files-dialog-ok').addEventListener('click', async () => {
+      const res = await fetch('/api/files/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paths }),
+      });
+      if (res.ok) navigate(currentPath);
+      dlg.remove();
     });
-    if (res.ok) navigate(currentPath);
+    el.appendChild(dlg);
   }
 
   function doDownload(fullPath) {
@@ -1097,26 +1158,60 @@ function buildFilesContent() {
     a.remove();
   }
 
-  async function doNewFolder() {
-    const name = prompt('Folder name:');
-    if (!name) return;
-    const res = await fetch('/api/files/mkdir', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: currentPath + '/' + name }),
+  function doNewFolder() {
+    showInputDialog('New Folder', 'Name', 'untitled', async (name) => {
+      if (!name) return;
+      const res = await fetch('/api/files/mkdir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: currentPath + '/' + name }),
+      });
+      if (res.ok) navigate(currentPath);
     });
-    if (res.ok) navigate(currentPath);
   }
 
-  async function doNewFile() {
-    const name = prompt('File name:');
-    if (!name) return;
-    const res = await fetch('/api/files/touch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: currentPath + '/' + name }),
+  function doNewFile() {
+    showInputDialog('New File', 'Name', 'untitled.txt', async (name) => {
+      if (!name) return;
+      const res = await fetch('/api/files/touch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: currentPath + '/' + name }),
+      });
+      if (res.ok) navigate(currentPath);
     });
-    if (res.ok) navigate(currentPath);
+  }
+
+  function showInputDialog(title, label, defaultVal, callback) {
+    const dlg = document.createElement('div');
+    dlg.className = 'files-dialog';
+    dlg.innerHTML = `
+      <div class="files-dialog-box" style="width:280px;">
+        <div class="files-dialog-title">${title}</div>
+        <label class="files-dialog-label">${label}</label>
+        <input class="files-dialog-input" type="text" spellcheck="false" value="" />
+        <div class="files-dialog-actions">
+          <button class="files-dialog-btn files-dialog-cancel">Cancel</button>
+          <button class="files-dialog-btn files-dialog-ok">OK</button>
+        </div>
+      </div>
+    `;
+    const input = dlg.querySelector('input');
+    input.value = defaultVal;
+
+    const doIt = () => { callback(input.value.trim()); dlg.remove(); };
+
+    dlg.querySelector('.files-dialog-cancel').addEventListener('click', () => dlg.remove());
+    dlg.querySelector('.files-dialog-ok').addEventListener('click', doIt);
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') doIt();
+      if (e.key === 'Escape') dlg.remove();
+    });
+
+    el.appendChild(dlg);
+    input.focus();
+    input.select();
   }
 
   backBtn.addEventListener('click', () => {
@@ -1136,9 +1231,25 @@ fetch('/api/user').then(r => r.json()).then(data => {
 }).catch(() => {});
 
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif']);
+const VIDEO_EXTS = new Set(['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'wmv', 'm4v', 'mpg', 'mpeg', 'ts']);
+
 function isImageFile(name) {
   const ext = name.split('.').pop().toLowerCase();
   return IMAGE_EXTS.has(ext);
+}
+
+function isVideoFile(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  return VIDEO_EXTS.has(ext);
+}
+
+function hasPreview(name) {
+  return isImageFile(name) || isVideoFile(name);
+}
+
+function previewUrl(fullPath, name) {
+  if (isVideoFile(name)) return `/api/thumbnail?path=${encodeURIComponent(fullPath)}`;
+  return `/api/raw?path=${encodeURIComponent(fullPath)}`;
 }
 
 function getFileIcon(name) {

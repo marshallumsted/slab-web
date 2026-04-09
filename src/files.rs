@@ -108,6 +108,74 @@ pub async fn serve_raw(Query(params): Query<RawParams>) -> impl IntoResponse {
     (StatusCode::OK, headers, bytes)
 }
 
+// video thumbnail via ffmpeg, cached
+pub async fn thumbnail(Query(params): Query<RawParams>) -> impl IntoResponse {
+    let path = PathBuf::from(&params.path);
+    let path = match path.canonicalize() {
+        Ok(p) => p,
+        Err(_) => return (StatusCode::NOT_FOUND, HeaderMap::new(), Vec::new()),
+    };
+
+    // cache dir
+    let cache_dir = PathBuf::from(
+        std::env::var("HOME").unwrap_or_else(|_| "/tmp".into()),
+    )
+    .join(".cache/slab/thumbs");
+    let _ = std::fs::create_dir_all(&cache_dir);
+
+    // cache key from path + modified time
+    let modified = std::fs::metadata(&path)
+        .ok()
+        .and_then(|m| m.modified().ok())
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let hash = format!("{:x}", {
+        let s = format!("{}:{}", path.display(), modified);
+        s.bytes().fold(0u64, |h, b| h.wrapping_mul(31).wrapping_add(b as u64))
+    });
+    let thumb_path = cache_dir.join(format!("{hash}.jpg"));
+
+    // serve from cache if exists
+    if thumb_path.exists() {
+        if let Ok(bytes) = std::fs::read(&thumb_path) {
+            let mut headers = HeaderMap::new();
+            headers.insert(header::CONTENT_TYPE, "image/jpeg".parse().unwrap());
+            headers.insert(header::CACHE_CONTROL, "public, max-age=3600".parse().unwrap());
+            return (StatusCode::OK, headers, bytes);
+        }
+    }
+
+    // generate with ffmpeg: grab frame at 1s, scale to 200px wide
+    let output = std::process::Command::new("ffmpeg")
+        .args([
+            "-y",
+            "-i", &path.to_string_lossy(),
+            "-ss", "1",
+            "-vframes", "1",
+            "-vf", "scale=200:-1",
+            "-q:v", "6",
+            &thumb_path.to_string_lossy(),
+        ])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status();
+
+    if output.is_err() || !thumb_path.exists() {
+        return (StatusCode::INTERNAL_SERVER_ERROR, HeaderMap::new(), Vec::new());
+    }
+
+    match std::fs::read(&thumb_path) {
+        Ok(bytes) => {
+            let mut headers = HeaderMap::new();
+            headers.insert(header::CONTENT_TYPE, "image/jpeg".parse().unwrap());
+            headers.insert(header::CACHE_CONTROL, "public, max-age=3600".parse().unwrap());
+            (StatusCode::OK, headers, bytes)
+        }
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, HeaderMap::new(), Vec::new()),
+    }
+}
+
 // file download with Content-Disposition
 pub async fn download(Query(params): Query<RawParams>) -> impl IntoResponse {
     let path = PathBuf::from(&params.path);

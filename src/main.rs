@@ -15,6 +15,7 @@ async fn main() {
     let api = Router::new()
         .route("/api/files", get(files::list_dir))
         .route("/api/raw", get(files::serve_raw))
+        .route("/api/thumbnail", get(files::thumbnail))
         .route("/api/download", get(files::download))
         .route("/api/files/rename", post(files::rename))
         .route("/api/files/copy", post(files::copy))

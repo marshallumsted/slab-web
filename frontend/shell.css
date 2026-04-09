@@ -652,6 +652,21 @@
   overflow: hidden;
 }
 
+.files-card-video-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  font-size: .6rem;
+  background: rgba(0, 0, 0, .6);
+  color: var(--white);
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Image previews — overlay layer that fades in/out over the grey tile */
 .files-card--preview,
 .files-row--preview {
