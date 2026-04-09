@@ -92,6 +92,13 @@ const apps = [
     tile: 'normal',
     launch: () => createWindow('logs', 'Log Viewer', buildLogsContent(), 700, 400),
   },
+  {
+    id: 'settings',
+    name: 'Settings',
+    color: 'red',
+    tile: 'normal',
+    launch: () => createWindow('settings', 'Settings', buildSettingsContent(), 550, 500),
+  },
 ];
 
 // ── Build Start Tiles ──
@@ -738,7 +745,9 @@ function buildFilesContent() {
         });
       });
 
-      renderEntries(data.entries);
+      const showHidden = slabConfig?.settings?.files?.show_hidden === true;
+      const filtered = showHidden ? data.entries : data.entries.filter(e => !e.name.startsWith('.'));
+      renderEntries(filtered);
     } catch (e) {
       listEl.innerHTML = '<div class="files-error">failed to load directory</div>';
     }
@@ -843,7 +852,7 @@ function buildFilesContent() {
     allItems = [];
 
     entries.forEach((entry, idx) => {
-      const isImage = !entry.is_dir && hasPreview(entry.name);
+      const isImage = !entry.is_dir && hasPreview(entry.name, slabConfig);
       const fullEntryPath = currentPath + '/' + entry.name;
       const imgUrl = isImage ? previewUrl(fullEntryPath, entry.name) : null;
 
@@ -1243,8 +1252,11 @@ function isVideoFile(name) {
   return VIDEO_EXTS.has(ext);
 }
 
-function hasPreview(name) {
-  return isImageFile(name) || isVideoFile(name);
+function hasPreview(name, cfg) {
+  const f = cfg?.settings?.files || {};
+  if (isImageFile(name)) return f.image_previews !== false;
+  if (isVideoFile(name)) return f.video_previews !== false;
+  return false;
 }
 
 function previewUrl(fullPath, name) {
@@ -1302,6 +1314,126 @@ function buildLogsContent() {
     </div>
   `;
 }
+
+function buildSettingsContent() {
+  const el = document.createElement('div');
+  el.className = 'settings-app';
+
+  // load config, render, save on change
+  let cfg = null;
+
+  async function load() {
+    const res = await fetch('/api/config');
+    cfg = await res.json();
+    if (!cfg.settings) cfg.settings = { performance: {}, files: {} };
+    if (!cfg.settings.performance) cfg.settings.performance = {};
+    if (!cfg.settings.files) cfg.settings.files = {};
+    render();
+  }
+
+  async function save() {
+    await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg),
+    });
+  }
+
+  function toggle(obj, key, def) {
+    const val = obj[key] !== undefined ? obj[key] : def;
+    obj[key] = !val;
+    save();
+    render();
+    applySettings();
+  }
+
+  function render() {
+    const p = cfg.settings.performance;
+    const f = cfg.settings.files;
+    el.innerHTML = `
+      <div class="settings-section">
+        <div class="settings-section-title">Performance</div>
+        <div class="settings-section-desc">Reduce visual effects for lower-powered devices</div>
+        ${settingRow('Animations', 'Smooth transitions on windows, menus, previews', p.animations !== false, 'perf-anim')}
+        ${settingRow('Dot Grid', 'Background dot pattern on desktop', p.dot_grid !== false, 'perf-dots')}
+        ${settingRow('Backdrop Blur', 'Blur effect on start screen overlay', p.backdrop_blur !== false, 'perf-blur')}
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-title">Files</div>
+        <div class="settings-section-desc">File browser behavior</div>
+        ${settingRow('Image Previews', 'Show thumbnail previews for image files', f.image_previews !== false, 'files-imgprev')}
+        ${settingRow('Video Previews', 'Generate thumbnails for video files (requires ffmpeg)', f.video_previews !== false, 'files-vidprev')}
+        ${settingRow('Show Hidden Files', 'Display dotfiles and hidden directories', f.show_hidden === true, 'files-hidden')}
+        ${settingSelect('Default View', 'Initial view mode when opening file browser', f.default_view || 'list', [['list', 'List'], ['grid', 'Grid']], 'files-defview')}
+      </div>
+    `;
+
+    // attach toggle listeners
+    el.querySelectorAll('.settings-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const map = {
+          'perf-anim': () => toggle(p, 'animations', true),
+          'perf-dots': () => toggle(p, 'dot_grid', true),
+          'perf-blur': () => toggle(p, 'backdrop_blur', true),
+          'files-imgprev': () => toggle(f, 'image_previews', true),
+          'files-vidprev': () => toggle(f, 'video_previews', true),
+          'files-hidden': () => toggle(f, 'show_hidden', false),
+        };
+        if (map[id]) map[id]();
+      });
+    });
+
+    el.querySelectorAll('.settings-select').forEach(sel => {
+      sel.addEventListener('change', () => {
+        const id = sel.dataset.id;
+        if (id === 'files-defview') { f.default_view = sel.value; save(); }
+      });
+    });
+  }
+
+  function settingRow(name, desc, on, id) {
+    return `
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <div class="settings-row-name">${name}</div>
+          <div class="settings-row-desc">${desc}</div>
+        </div>
+        <button class="settings-toggle ${on ? 'on' : ''}" data-id="${id}">
+          <span class="settings-toggle-knob"></span>
+        </button>
+      </div>
+    `;
+  }
+
+  function settingSelect(name, desc, value, options, id) {
+    const opts = options.map(([v, l]) => `<option value="${v}" ${v === value ? 'selected' : ''}>${l}</option>`).join('');
+    return `
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <div class="settings-row-name">${name}</div>
+          <div class="settings-row-desc">${desc}</div>
+        </div>
+        <select class="settings-select" data-id="${id}">${opts}</select>
+      </div>
+    `;
+  }
+
+  load();
+  return el;
+}
+
+// apply performance settings to the page
+function applySettings() {
+  fetch('/api/config').then(r => r.json()).then(cfg => {
+    const p = cfg.settings?.performance || {};
+    document.body.classList.toggle('no-animations', p.animations === false);
+    document.body.classList.toggle('no-dot-grid', p.dot_grid === false);
+    document.body.classList.toggle('no-blur', p.backdrop_blur === false);
+  }).catch(() => {});
+}
+// apply on load
+applySettings();
 
 // ── Suppress system right-click across entire UI ──
 

@@ -893,3 +893,132 @@ select.files-dialog-input {
   background: var(--gray-800);
   margin: 4px 0;
 }
+
+/* ── Settings App ── */
+
+.settings-app {
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-700) transparent;
+}
+
+.settings-section {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--gray-800);
+}
+
+.settings-section:last-child {
+  border-bottom: none;
+}
+
+.settings-section-title {
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 2px;
+}
+
+.settings-section-desc {
+  font-size: .6rem;
+  color: var(--gray-500);
+  margin-bottom: 12px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  gap: 16px;
+}
+
+.settings-row-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-row-name {
+  font-size: .7rem;
+  font-weight: 600;
+  color: var(--white);
+}
+
+.settings-row-desc {
+  font-size: .6rem;
+  color: var(--gray-500);
+  margin-top: 1px;
+}
+
+/* Toggle switch — brutalist, no rounded corners */
+.settings-toggle {
+  width: 36px;
+  height: 18px;
+  background: var(--gray-700);
+  border: 1px solid var(--gray-600);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+
+.settings-toggle.on {
+  background: var(--red);
+  border-color: var(--red);
+}
+
+.settings-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  background: var(--gray-300);
+  transition: left .15s;
+}
+
+.settings-toggle.on .settings-toggle-knob {
+  left: 20px;
+  background: var(--white);
+}
+
+/* Select dropdown */
+.settings-select {
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  background: var(--gray-800);
+  border: 1px solid var(--gray-700);
+  color: var(--white);
+  padding: 4px 8px;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.settings-select:focus {
+  border-color: var(--red);
+}
+
+/* ── Performance toggle classes ── */
+
+body.no-dot-grid::before {
+  display: none;
+}
+
+body.no-blur .start-screen {
+  backdrop-filter: none;
+}
+
+body.no-animations *,
+body.no-animations *::before,
+body.no-animations *::after {
+  transition-duration: 0s !important;
+  animation-duration: 0s !important;
+}

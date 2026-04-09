@@ -4,9 +4,70 @@ use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SlabConfig {
+    #[serde(default)]
+    pub settings: Settings,
     pub places: Vec<Place>,
     pub network: Vec<NetworkPlace>,
 }
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Settings {
+    #[serde(default)]
+    pub performance: PerformanceSettings,
+    #[serde(default)]
+    pub files: FilesSettings,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            performance: PerformanceSettings::default(),
+            files: FilesSettings::default(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct PerformanceSettings {
+    #[serde(default = "default_true")]
+    pub animations: bool,
+    #[serde(default = "default_true")]
+    pub dot_grid: bool,
+    #[serde(default = "default_true")]
+    pub backdrop_blur: bool,
+}
+
+impl Default for PerformanceSettings {
+    fn default() -> Self {
+        Self { animations: true, dot_grid: true, backdrop_blur: true }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct FilesSettings {
+    #[serde(default = "default_true")]
+    pub image_previews: bool,
+    #[serde(default = "default_true")]
+    pub video_previews: bool,
+    #[serde(default = "default_true")]
+    pub show_hidden: bool,
+    #[serde(default = "default_list")]
+    pub default_view: String,
+}
+
+impl Default for FilesSettings {
+    fn default() -> Self {
+        Self {
+            image_previews: true,
+            video_previews: true,
+            show_hidden: false,
+            default_view: "list".into(),
+        }
+    }
+}
+
+fn default_true() -> bool { true }
+fn default_list() -> String { "list".into() }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Place {
@@ -36,6 +97,7 @@ fn config_path() -> PathBuf {
 fn default_config() -> SlabConfig {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/home/user".into());
     SlabConfig {
+        settings: Settings::default(),
         places: vec![
             Place { name: "Home".into(), path: home.clone(), builtin: true },
             Place { name: "Desktop".into(), path: format!("{home}/Desktop"), builtin: true },
