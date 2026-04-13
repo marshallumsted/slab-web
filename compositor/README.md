@@ -34,22 +34,26 @@ Native Wayland compositor for slab. Renders the desktop directly on hardware —
 └─────────────────────────────────────────────┘
 ```
 
-## Two Modes
+## Two Separate Products
 
-### Native Mode
-- Smithay-based Wayland compositor written in Rust
-- Renders slab's UI natively: tile grid, top menu bar, bottom taskbar, windows
-- GPU-accelerated via Vulkan/OpenGL (wgpu or direct EGL)
-- Wayland clients (native Linux apps) run as windows inside slab
+### slab (Native DE)
+- Pure Rust desktop environment — all apps, all UI, all rendering in Rust
+- Smithay-based Wayland compositor
+- GPU-accelerated via wgpu
+- Native Wayland apps (Firefox, VS Code, etc.) run as first-class windows
+- Slab apps (terminal, files, editor, notes, sysmon) rebuilt as native Rust apps
 - Multi-monitor support (Pi 5 has dual HDMI)
 - Direct input handling (keyboard, mouse, touch)
-- Boots straight from TTY — no login manager needed, systemd service
+- Boots straight from TTY — no browser, no WebView, no HTML
+- This is the real desktop. Not a wrapper around a web page.
 
-### Remote Mode
+### slab-web (Remote Access Module)
+- Separate downloadable binary/module
 - The existing web server (axum + HTML/CSS/JS)
-- Access the same desktop from any browser on any device
-- Can run alongside native mode — use the physical display AND access remotely
-- Downloadable as a separate module if you only want remote access
+- Access the desktop from any browser on any device
+- Runs alongside the native DE for remote access — like phone convergence
+- Or runs standalone on headless servers/VMs (the current use case)
+- Not required — the native DE works without it
 
 ## Why Smithay
 
@@ -61,24 +65,13 @@ Native Wayland compositor for slab. Renders the desktop directly on hardware —
 
 ## Rendering
 
-The compositor needs to render slab's UI. Options:
+Pure native. No WebView, no browser engine, no HTML.
 
-### Option A — Custom renderer
-- Render the tile grid, taskbar, menu bar, and windows directly using wgpu or Skia
-- Most performant, most work
-- Full control over every pixel — slab's brutalist design rendered natively
-
-### Option B — Embedded WebView
-- Use wry/webview2 to embed a browser engine inside the compositor
-- The compositor manages windows and input, the WebView renders slab's HTML/CSS/JS
-- Reuses all existing frontend code
-- Native Wayland apps coexist alongside web-rendered slab apps
-
-### Option C — Hybrid
-- Shell chrome (taskbar, tile grid, menu bar) rendered natively for performance
-- App content rendered via embedded WebView per-window
-- Native Wayland apps get native windows, slab web apps get WebView windows
-- Best of both but most complex
+- Shell chrome (tile grid, taskbar, menu bar) rendered directly via wgpu
+- Slab apps (terminal, files, editor, etc.) are Rust crates rendered natively
+- Native Wayland apps (Firefox, Steam, etc.) render through the compositor as normal
+- UI toolkit: Iced (pure Rust, wgpu-based) or custom renderer using wgpu + text shaping
+- Design tokens (colors, fonts, spacing) expressed as Rust constants — same values as the CSS variables but compiled in
 
 ## What the Compositor Owns
 
@@ -89,13 +82,15 @@ The compositor needs to render slab's UI. Options:
 - **Shell rendering** — tile grid, taskbar, menu bar drawn on screen
 - **Session** — TTY login, user switching, lock screen
 
-## What the Compositor Shares with Web Mode
+## What's Shared with slab-web
 
-- **App manifests** — same `frontend/apps/*/manifest.json` files
-- **Backend APIs** — same `/api/*` endpoints for files, sysmon, config, etc.
 - **Config system** — same `~/.config/slab/config.json`
 - **Workspace definitions** — same workspace JSON files
-- **Design tokens** — colors, fonts, spacing (expressed as Rust constants instead of CSS variables)
+- **Backend logic** — file operations, sysmon, config, terminal PTY (shared Rust crates)
+- **Design language** — same colors, fonts, spacing, brutalist principles
+- **Interaction model** — same tile grid, workspaces, adaptive tiles, quick spawn concepts
+
+What's NOT shared: the rendering, the UI code, the app implementations. Native apps are Rust. Web apps are HTML/CSS/JS. Two separate codebases implementing the same design.
 
 ## Dependencies
 
@@ -127,8 +122,27 @@ compositor/
     shell.rs          # tile grid, taskbar, menu bar rendering
     window.rs         # Wayland client window management
     tiling.rs         # auto-tiling engine
-    renderer.rs       # wgpu/skia rendering
+    renderer.rs       # wgpu rendering
+  apps/
+    terminal/         # native Rust terminal (PTY + custom renderer)
+    files/            # native Rust file browser
+    editor/           # native Rust text editor
+    sysmon/           # native Rust system monitor
+    notes/            # native Rust notes (sticky, legal pad, sketch)
+    settings/         # native Rust settings panel
   Cargo.toml
+```
+
+Each app in `compositor/apps/` is a Rust crate that implements a common trait:
+
+```rust
+pub trait SlabApp {
+    fn id(&self) -> &str;
+    fn name(&self) -> &str;
+    fn build(&self, ctx: &mut RenderContext) -> AppView;
+    fn get_data(&self) -> Option<TileData>;     // for live tiles
+    fn on_input(&mut self, event: InputEvent);
+}
 ```
 
 ## Milestone Path
