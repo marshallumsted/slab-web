@@ -315,17 +315,38 @@ This lets the frontend adapt — hide install buttons that won't work, show moun
 
 ## Stack
 
+**Two runtime modes from one codebase:**
+
+- **Native mode** — Wayland compositor (Smithay) renders slab directly on hardware. GPU-accelerated, boots from TTY, multi-monitor. Native Linux apps run as Wayland clients.
+- **Remote mode** — Web server (axum) serves slab over HTTP. Access from any browser, any device. Runs alongside native mode or standalone.
+
+Both modes share the same backend, app manifests, config system, and workspace definitions.
+
+**Shared:**
 - **Backend:** Rust (axum + tokio)
-- **Frontend:** HTML/CSS/JS (vanilla, no framework)
+- **App system:** `frontend/apps/*/manifest.json` — same apps, same data layer
 - **System interfaces:** `/proc`, `/sys`, D-Bus (systemd)
-- **Thumbnails:** ffmpeg (video frame extraction, cached in `~/.cache/slab/thumbs/`)
-- **X11 bridge:** Xpra (optional, for Tier 3)
+- **Config:** `~/.config/slab/` — same config for both modes
+
+**Remote mode:**
+- **Frontend:** HTML/CSS/JS (vanilla, no framework)
+- **Thumbnails:** ffmpeg (video frame extraction)
+- **X11 bridge:** Xpra (optional, for streaming native GUI apps to browser)
 - **Deployment:** single binary, or Docker
+
+**Native mode:**
+- **Compositor:** Smithay (pure Rust Wayland compositor)
+- **Rendering:** wgpu (GPU-accelerated)
+- **Input:** libinput (keyboard, mouse, touch)
+- **Native apps:** Wayland clients run directly — no Xpra needed
+
+See [compositor/README.md](compositor/README.md) for the native compositor architecture.
 
 ## Target Platforms
 
 All major systemd-based Linux distributions:
 - Arch, Debian, Ubuntu, Fedora (RHEL/CentOS), openSUSE
+- Raspberry Pi (dual HDMI via native compositor)
 
 No distro-specific code — talks to kernel interfaces (`/proc`, `/sys`) and systemd (D-Bus).
 

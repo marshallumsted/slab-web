@@ -248,4 +248,41 @@ Build in any order. Each is independent.
 ### 11b. Docker Image
 - Official Docker image with all dependencies baked in
 - Volume mounts for config, data, and host filesystem
-- Single-command deployment with sensible defaults
+- Single-command deployment
+
+---
+
+## Phase 12 — Native Wayland Compositor
+
+Turn slab into a standalone desktop environment. See [compositor/README.md](compositor/README.md).
+
+### 12a. Bare Compositor
+- Smithay-based Wayland compositor in Rust
+- DRM/KMS output (detect monitors, set resolution)
+- libinput for keyboard/mouse
+- Can spawn and display a Wayland terminal (foot/alacritty)
+- Boots from TTY via systemd service
+
+### 12b. Window Management
+- Position, resize, focus, close Wayland client windows
+- Window stacking, alt-tab switching
+- Basic tiling
+
+### 12c. Shell Chrome
+- Render the tile grid, top menu bar, and bottom taskbar natively
+- Same design language (colors, fonts, spacing) as web mode
+- GPU-accelerated via wgpu
+
+### 12d. App Integration
+- Load same app manifests as web mode
+- Show tiles, launch slab apps alongside native Wayland apps
+- Shared backend APIs (files, sysmon, config)
+
+### 12e. Multi-Monitor
+- Dual HDMI on Pi 5
+- Per-monitor workspaces or spanned desktop
+
+### 12f. Web Server Alongside
+- Run the web server in the background for remote access
+- Same desktop accessible natively AND via browser simultaneously
+- Separate downloadable module for remote-only deployments with sensible defaults
