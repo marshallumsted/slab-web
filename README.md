@@ -1,8 +1,10 @@
-# [S] slab
+# [S] slab-web
 
 A brutalist webtop — a full desktop environment in the browser. Built for headless servers and VMs.
 
 Sharp edges. Flat blocks. Zero rounded corners. One Rust binary. One browser tab. Your workflow, everywhere.
+
+> **See also:** [slab](https://github.com/marshallumsted/slab) — the native Wayland desktop environment. Pure Rust compositor, GPU-accelerated, boots from TTY. slab-web is the remote access module.
 
 ## Concept
 
